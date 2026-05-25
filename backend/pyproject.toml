@@ -67,6 +67,7 @@ dev = [
     "ruff==0.8.6",                   # 代码格式化和 Lint 工具
     "mypy==1.13.0",                  # 静态类型检查
     "pytest-cov==6.0.0",            # 测试覆盖率报告
+    "aiosqlite==0.22.1",             # SQLite 异步驱动（单元测试用）
 ]
 
 [build-system]
