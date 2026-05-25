@@ -17,9 +17,10 @@ WORKDIR /app
 # 先复制依赖文件，利用 Docker 缓存层
 COPY pyproject.toml ./
 
-# 安装项目依赖（setuptools<70 保留 pkg_resources，openai-whisper 构建需要）
+# 安装项目依赖（先单独装 whisper 避免构建隔离问题）
 RUN pip install --no-cache-dir --upgrade pip "setuptools<70" wheel \
-    && pip install --no-cache-dir --no-build-isolation .
+    && pip install --no-cache-dir --no-build-isolation "openai-whisper==20240930" \
+    && pip install --no-cache-dir .
 
 # 复制应用代码
 COPY . /app
