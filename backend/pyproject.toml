@@ -48,7 +48,7 @@ dependencies = [
     "networkx==3.4.2",               # 内存图计算库
 
     # === Multimodal 多模态 ===
-    "openai-whisper==20240930",      # OpenAI Whisper 语音转文字
+    "openai-whisper>=20250625",      # OpenAI Whisper 语音转文字
     "edge-tts==6.1.12",             # 微软 Edge TTS 文字转语音
 
     # === Utils 工具库 ===

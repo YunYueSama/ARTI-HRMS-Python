@@ -98,6 +98,19 @@ from app.schemas.agent import (
     AgentTaskView,
 )
 
+# NLP 相关
+from app.schemas.nlp import (
+    TextAnalyzeRequest,
+    TextAnalyzeResponse,
+    EntityItem,
+    SentimentResult,
+    KeywordItem,
+    KeywordExtractRequest,
+    KeywordExtractResponse,
+    SentimentAnalyzeRequest,
+    SentimentAnalyzeResponse,
+)
+
 __all__ = [
     # 通用
     "ApiResponse",
@@ -163,4 +176,14 @@ __all__ = [
     "AgentPlanEntity",
     "AgentPlan",
     "AgentTaskView",
+    # NLP
+    "TextAnalyzeRequest",
+    "TextAnalyzeResponse",
+    "EntityItem",
+    "SentimentResult",
+    "KeywordItem",
+    "KeywordExtractRequest",
+    "KeywordExtractResponse",
+    "SentimentAnalyzeRequest",
+    "SentimentAnalyzeResponse",
 ]

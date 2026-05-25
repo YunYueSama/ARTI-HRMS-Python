@@ -47,6 +47,7 @@ from app.routers.observability import router as observability_router
 from app.routers.multimodal import router as multimodal_router
 from app.routers.knowledge_graph import router as knowledge_graph_router
 from app.routers.config import router as config_router
+from app.routers.nlp import router as nlp_router
 from app.routers.module_scope_rules import router as module_scope_rule_router
 from app.routers.approval_rules import router as approval_rule_router
 from app.routers.approval_rule_types import router as approval_rule_type_router
@@ -258,3 +259,6 @@ app.include_router(observability_router, prefix="/api/traces", tags=["可观测�
 
 # --- 配置模块 ---
 app.include_router(config_router, prefix="/api/config", tags=["模型配置"])
+
+# --- NLP 模块 ---
+app.include_router(nlp_router, prefix="/api/nlp", tags=["NLP 文本分析"])
