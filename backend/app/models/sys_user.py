@@ -23,13 +23,13 @@ class SysUser(Base):
     # 关联员工ID
     emp_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 登录用户名
-    username: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    username: Mapped[str] = mapped_column(String(50), nullable=False)
     # 登录密码（加密存储）
-    password: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    password: Mapped[str] = mapped_column(String(200), nullable=False)
     # 角色ID
     role_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 账号状态（active/disabled 等）
-    status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="启用")
     # 最后登录时间
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # 创建时间
