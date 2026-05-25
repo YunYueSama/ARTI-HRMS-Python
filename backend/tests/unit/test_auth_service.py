@@ -4,7 +4,6 @@
 说明：测试登录、密码强度检测等认证相关功能。
 """
 
-import pytest
 from app.services.auth_service import check_password_strength
 
 
