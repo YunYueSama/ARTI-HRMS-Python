@@ -1,0 +1,112 @@
+[project]
+name = "atri-hrms-backend"
+version = "2.0.0"
+description = "ATRI-HRMS 智能人力资源管理系统 - Python FastAPI 后端"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "HRMS Team" }
+]
+
+# ============================================================
+# 依赖管理：所有版本锁定到精确版本，确保可复现构建
+# 分类：Core（核心框架）、Database（数据库）、AI（人工智能）、
+#       Auth（认证）、Vector（向量）、Graph（图谱）、
+#       Multimodal（多模态）、Utils（工具）
+# ============================================================
+dependencies = [
+    # === Core 核心框架 ===
+    "fastapi==0.115.6",              # 异步 Web 框架，自动生成 OpenAPI 文档
+    "uvicorn==0.34.0",               # ASGI 服务器，运行 FastAPI 应用
+    "pydantic==2.10.4",              # 数据校验和序列化框架
+    "pydantic-settings==2.7.1",      # 环境变量配置管理
+
+    # === Database 数据库 ===
+    "sqlalchemy==2.0.36",            # 异步 ORM，映射现有 MySQL 表
+    "aiomysql==0.2.0",               # MySQL 异步驱动（asyncio）
+    "asyncpg==0.30.0",               # PostgreSQL 异步驱动（用于 pgvector）
+    "alembic==1.14.0",               # 数据库迁移工具
+
+    # === AI 人工智能框架 ===
+    "langchain==0.3.14",             # LLM 应用框架（Chain、Prompt、Memory）
+    "langchain-openai==0.3.0",       # OpenAI 兼容模型包装器
+    "langchain-community==0.3.14",   # 社区集成（Ollama 等）
+    "langgraph==0.2.60",             # 有状态 Agent 工作流引擎
+    "langfuse==2.57.1",              # LLM 可观测性（Trace、Token 统计）
+
+    # === Auth 认证授权 ===
+    "python-jose[cryptography]==3.3.0",  # JWT Token 生成和校验
+    "passlib[bcrypt]==1.7.4",            # 密码哈希（BCrypt，兼容 Spring Security）
+    "bcrypt==4.0.1",                     # BCrypt 实现（锁定版本，兼容 passlib 1.7.4）
+
+    # === Vector 向量数据库 ===
+    "pgvector==0.3.6",               # PostgreSQL pgvector 扩展支持
+
+    # === Graph 知识图谱 ===
+    "neo4j==5.27.0",                 # Neo4j 图数据库驱动
+    "networkx==3.4.2",               # 内存图计算库
+
+    # === Multimodal 多模态 ===
+    "openai-whisper==20240930",      # OpenAI Whisper 语音转文字
+    "edge-tts==6.1.12",             # 微软 Edge TTS 文字转语音
+
+    # === Utils 工具库 ===
+    "httpx==0.28.1",                 # 异步 HTTP 客户端（调用外部 API）
+    "redis==5.2.1",                  # Redis 客户端（缓存、会话）
+    "tiktoken==0.8.0",              # Token 计数器（OpenAI 分词器）
+    "python-multipart==0.0.18",      # 文件上传支持（multipart/form-data）
+]
+
+[project.optional-dependencies]
+# === Dev 开发工具 ===
+dev = [
+    "pytest==8.3.4",                 # 测试框架
+    "pytest-asyncio==0.24.0",        # 异步测试支持
+    "hypothesis==6.119.3",           # 属性测试框架（Property-Based Testing）
+    "ruff==0.8.6",                   # 代码格式化和 Lint 工具
+    "mypy==1.13.0",                  # 静态类型检查
+    "pytest-cov==6.0.0",            # 测试覆盖率报告
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+# ============================================================
+# Ruff 配置：代码格式化和 Lint 规则
+# ============================================================
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E501"]  # 行长度由 line-length 控制
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ============================================================
+# Pytest 配置
+# ============================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# ============================================================
+# MyPy 配置：静态类型检查
+# ============================================================
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

@@ -1,0 +1,50 @@
+# ============================================================
+# Docker 构建忽略文件
+# 说明：排除不需要复制到 Docker 镜像中的文件
+# ============================================================
+
+# Python 缓存和虚拟环境
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# 测试和开发文件
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# IDE 配置
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# 环境变量文件（敏感信息不应打入镜像）
+.env
+.env.*
+!.env.example
+
+# Docker 相关
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# 文档
+docs/
+*.md
+!README.md
+
+# 临时文件
+*.log
+tmp/
+temp/

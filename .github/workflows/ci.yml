@@ -1,0 +1,262 @@
+# ============================================================
+# HRMS Python 后端 - CI 持续集成工作流
+# 说明：代码推送或 PR 时自动运行代码检查、测试和构建
+# 触发条件：push 和 pull_request 事件
+# ============================================================
+
+name: CI - 代码检查与测试
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+
+# 同一分支的新推送取消正在运行的旧工作流（节省资源）
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/hrms-backend
+
+jobs:
+  # ========================================
+  # 代码检查任务（Lint）
+  # 说明：运行 ruff 格式检查和 mypy 类型检查
+  # ========================================
+  lint:
+    name: 代码检查 (Ruff + MyPy)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      # 检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 设置 Python 环境
+      - name: 设置 Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # 缓存 pip 依赖（加速后续构建）
+      - name: 缓存 pip 依赖
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-lint-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-lint-
+            ${{ runner.os }}-pip-
+
+      # 安装依赖
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # 运行 ruff 代码格式检查
+      - name: Ruff 代码检查
+        run: |
+          ruff check app/ tests/
+          ruff format --check app/ tests/
+
+      # 运行 mypy 类型检查
+      - name: MyPy 类型检查
+        run: mypy app/ --ignore-missing-imports
+
+  # ========================================
+  # 测试任务（Test）
+  # 说明：启动 MySQL 和 PostgreSQL 服务容器，运行 pytest
+  # ========================================
+  test:
+    name: 单元测试 (Pytest)
+    runs-on: ubuntu-latest
+    needs: lint
+    defaults:
+      run:
+        working-directory: backend
+
+    # 服务容器：测试所需的数据库
+    services:
+      # MySQL 服务（主业务数据库）
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: 123456
+          MYSQL_DATABASE: hrms_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      # PostgreSQL + pgvector 服务（向量数据库）
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hrms_vector
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      # Redis 服务（缓存）
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      # 检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 设置 Python 环境
+      - name: 设置 Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # 缓存 pip 依赖
+      - name: 缓存 pip 依赖
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-test-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-test-
+            ${{ runner.os }}-pip-
+
+      # 安装依赖（包含开发依赖）
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # 运行测试并生成覆盖率报告
+      - name: 运行测试
+        env:
+          # 测试环境数据库连接配置
+          MYSQL_HOST: localhost
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: 123456
+          MYSQL_DATABASE: hrms_db
+          PGVECTOR_HOST: localhost
+          PGVECTOR_PORT: 5432
+          PGVECTOR_USER: postgres
+          PGVECTOR_PASSWORD: postgres
+          PGVECTOR_DATABASE: hrms_vector
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET_KEY: test-secret-key-for-ci
+          APP_ENV: testing
+          APP_DEBUG: "false"
+        run: |
+          pytest tests/ -v \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --tb=short
+
+      # 覆盖率检查（低于 70% 发出警告）
+      - name: 覆盖率检查
+        if: always()
+        run: |
+          coverage_pct=$(python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          rate = float(root.attrib.get('line-rate', 0))
+          print(int(rate * 100))
+          " 2>/dev/null || echo "0")
+          echo "当前测试覆盖率: ${coverage_pct}%"
+          if [ "$coverage_pct" -lt 70 ]; then
+            echo "::warning::测试覆盖率 ${coverage_pct}% 低于 70% 阈值，请补充测试用例"
+          fi
+
+      # 上传覆盖率报告
+      - name: 上传覆盖率报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend/coverage.xml
+          retention-days: 7
+
+  # ========================================
+  # 构建任务（Build）
+  # 说明：构建 Docker 镜像并推送到 GHCR（仅 main 分支）
+  # ========================================
+  build:
+    name: 构建 Docker 镜像
+    runs-on: ubuntu-latest
+    needs: test
+    # 仅在 main 分支的 push 事件触发构建
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # 检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 登录 GitHub Container Registry
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 提取 Docker 元数据（标签和标注）
+      - name: 提取 Docker 元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      # 设置 Docker Buildx（支持多平台构建和缓存）
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 构建并推送 Docker 镜像
+      - name: 构建并推送镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

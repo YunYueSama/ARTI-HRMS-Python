@@ -1,0 +1,61 @@
+# ============================================================
+# HRMS Python 后端 .gitignore
+# ============================================================
+
+# Python 编译产物
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# 环境变量（包含 API Key 等敏感信息）
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 测试和覆盖率
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 构建产物
+dist/
+build/
+*.egg-info/
+*.egg
+
+# 日志
+*.log
+logs/
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 上传文件和临时文件
+uploads/
+temp/
+tmp/
+
+# Whisper 模型缓存
+.cache/
+
+# Alembic 迁移（当前未使用）
+alembic/versions/*.py
+!alembic/versions/__init__.py

@@ -1,0 +1,73 @@
+# ============================================================
+# HRMS Python 后端 - Docker Compose 开发环境覆盖文件
+# 说明：在基础 docker-compose.yml 之上覆盖开发环境特有配置
+# 用法：docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up -d
+# ============================================================
+
+version: "3.8"
+
+services:
+  # ========================================
+  # 后端应用服务（开发模式覆盖）
+  # 说明：启用热重载、调试模式、挂载源码目录
+  # ========================================
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      # 开发模式不使用多阶段构建缓存，确保代码最新
+      target: runtime
+    volumes:
+      # 挂载源码目录，实现热重载（代码修改后自动重启）
+      - ../backend/app:/app/app:ro
+      # 挂载 alembic 迁移文件
+      - ../backend/alembic:/app/alembic:ro
+    environment:
+      APP_ENV: development
+      APP_DEBUG: "true"
+      # 开发环境使用本地主机名
+      MYSQL_HOST: mysql
+      PGVECTOR_HOST: postgres
+      REDIS_HOST: redis
+    # 开发模式启用热重载（--reload）
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # 开发模式不需要健康检查依赖（加快启动速度）
+    depends_on:
+      mysql:
+        condition: service_started
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  # ========================================
+  # MySQL 开发模式覆盖
+  # 说明：暴露额外端口，方便本地工具连接
+  # ========================================
+  mysql:
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-123456}
+      MYSQL_DATABASE: hrms_db
+
+  # ========================================
+  # PostgreSQL 开发模式覆盖
+  # ========================================
+  postgres:
+    ports:
+      - "5432:5432"
+
+  # ========================================
+  # Redis 开发模式覆盖
+  # ========================================
+  redis:
+    ports:
+      - "6379:6379"
+
+  # ========================================
+  # Ollama 开发模式覆盖
+  # ========================================
+  ollama:
+    ports:
+      - "11434:11434"

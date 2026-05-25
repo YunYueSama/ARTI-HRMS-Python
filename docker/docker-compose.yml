@@ -1,0 +1,157 @@
+# ============================================================
+# HRMS Python 后端 - Docker Compose 编排文件
+# 说明：定义所有服务的容器编排配置
+# 用法：docker compose -f docker/docker-compose.yml up -d
+# ============================================================
+
+version: "3.8"
+
+services:
+  # ========================================
+  # 后端应用服务（FastAPI）
+  # 说明：HRMS 核心业务 API 服务
+  # ========================================
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: hrms-backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      # 容器内部使用服务名作为主机名（Docker 网络 DNS 解析）
+      MYSQL_HOST: mysql
+      PGVECTOR_HOST: postgres
+      REDIS_HOST: redis
+      LLM_FALLBACK_BASE_URL: http://ollama:11434/v1
+      APP_ENV: production
+      APP_DEBUG: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - hrms-network
+
+  # ========================================
+  # MySQL 数据库服务（主业务数据库）
+  # 说明：存储员工、部门、考勤等核心业务数据
+  # ========================================
+  mysql:
+    image: mysql:8.0
+    container_name: hrms-mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-123456}
+      MYSQL_DATABASE: hrms_db
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - hrms-network
+
+  # ========================================
+  # PostgreSQL + pgvector 服务（向量数据库）
+  # 说明：存储 RAG 文档向量，支持语义检索
+  # ========================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: hrms-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${PGVECTOR_USER:-postgres}
+      POSTGRES_PASSWORD: ${PGVECTOR_PASSWORD:-postgres}
+      POSTGRES_DB: hrms_vector
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - hrms-network
+
+  # ========================================
+  # Redis 缓存服务
+  # 说明：用于会话缓存、Token 计数缓存、配置缓存
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: hrms-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - hrms-network
+
+  # ========================================
+  # Ollama 本地 LLM 服务
+  # 说明：提供本地大语言模型推理能力（备用 LLM）
+  # ========================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hrms-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - hrms-network
+
+# ============================================================
+# 数据卷定义
+# 说明：持久化存储，容器重启后数据不丢失
+# ============================================================
+volumes:
+  mysql_data:
+    driver: local
+  pg_data:
+    driver: local
+  redis_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+# ============================================================
+# 网络定义
+# 说明：所有服务在同一网络中，通过服务名互相访问
+# ============================================================
+networks:
+  hrms-network:
+    driver: bridge
