@@ -44,8 +44,12 @@ async def list_salary_records(
 ) -> ApiResponse[PageResponse[SalaryRecordResponse]]:
     """分页查询薪资记录，支持员工、状态和月份范围筛选"""
     query = SalaryRecordQuery(
-        page=page, size=size, emp_id=emp_id, status=status,
-        month_start=month_start, month_end=month_end,
+        page=page,
+        size=size,
+        emp_id=emp_id,
+        status=status,
+        month_start=month_start,
+        month_end=month_end,
     )
     result = await salary_service.list_salary_records(query, db)
     return ok(data=result)

@@ -13,8 +13,7 @@ Java 对应关系：
 """
 
 import re
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,9 +82,7 @@ async def login(username: str, password: str, db: AsyncSession) -> LoginResponse
         emp_result = await db.execute(emp_stmt)
         employee = emp_result.scalar_one_or_none()
         if employee is not None and employee.status != "在职":
-            raise NotFoundException(
-                message=f"员工状态为{employee.status}，无法登录系统"
-            )
+            raise NotFoundException(message=f"员工状态为{employee.status}，无法登录系统")
 
     # 5. 更新最后登录时间
     user.last_login = datetime.now()
@@ -179,7 +176,7 @@ async def change_password(request: ChangePasswordRequest, db: AsyncSession) -> N
 
     # 哈希新密码并保存
     user.password = hash_password(request.new_password)
-    user.update_time = datetime.now(timezone.utc)
+    user.update_time = datetime.now(UTC)
     await db.flush()
 
 
@@ -210,7 +207,7 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncSession) -> Non
 
     # 哈希新密码并保存
     user.password = hash_password(request.new_password)
-    user.update_time = datetime.now(timezone.utc)
+    user.update_time = datetime.now(UTC)
     await db.flush()
 
 
@@ -303,7 +300,7 @@ def check_password_strength(password: str) -> PasswordStrengthResponse:
 # ============================================================
 
 
-def _password_matches(raw: str, stored: Optional[str]) -> bool:
+def _password_matches(raw: str, stored: str | None) -> bool:
     """
     验证密码（兼容 BCrypt 哈希和明文）
 
@@ -333,32 +330,30 @@ async def _build_profile(user: SysUser, db: AsyncSession) -> UserProfile:
          组装完整的 UserProfile 对象。
     """
     # 查询关联员工
-    employee: Optional[Employee] = None
+    employee: Employee | None = None
     if user.emp_id is not None:
         emp_stmt = select(Employee).where(Employee.emp_id == user.emp_id)
         emp_result = await db.execute(emp_stmt)
         employee = emp_result.scalar_one_or_none()
 
     # 查询角色
-    role: Optional[Role] = None
+    role: Role | None = None
     if user.role_id is not None:
         role_stmt = select(Role).where(Role.role_id == user.role_id)
         role_result = await db.execute(role_stmt)
         role = role_result.scalar_one_or_none()
 
     # 查询部门
-    department: Optional[Department] = None
+    department: Department | None = None
     if employee is not None and employee.dept_id is not None:
         dept_stmt = select(Department).where(Department.dept_id == employee.dept_id)
         dept_result = await db.execute(dept_stmt)
         department = dept_result.scalar_one_or_none()
 
     # 查询职位
-    position: Optional[JobPosition] = None
+    position: JobPosition | None = None
     if employee is not None and employee.position_id is not None:
-        pos_stmt = select(JobPosition).where(
-            JobPosition.position_id == employee.position_id
-        )
+        pos_stmt = select(JobPosition).where(JobPosition.position_id == employee.position_id)
         pos_result = await db.execute(pos_stmt)
         position = pos_result.scalar_one_or_none()
 
@@ -407,9 +402,7 @@ async def _get_permission_codes(role_id: int, db: AsyncSession) -> list[str]:
     return [row[0] for row in result.all()]
 
 
-def _resolve_approval_assignee_tags(
-    identity_tag: Optional[str], role_code: Optional[str]
-) -> list[str]:
+def _resolve_approval_assignee_tags(identity_tag: str | None, role_code: str | None) -> list[str]:
     """
     解析审批指派标签
 
@@ -443,7 +436,7 @@ def _resolve_approval_assignee_tags(
     return tags
 
 
-def _normalize_approval_tag(tag: Optional[str]) -> Optional[str]:
+def _normalize_approval_tag(tag: str | None) -> str | None:
     """
     标准化审批标签
 

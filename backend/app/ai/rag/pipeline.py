@@ -36,7 +36,6 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -306,20 +305,20 @@ def clean_text(raw_text: str) -> str:
 
 # 分隔符优先级列表（从粗粒度到细粒度）
 _SEPARATORS = [
-    "\n\n",   # 段落分隔
-    "\n",     # 行分隔
-    "。",     # 中文句号
-    "！",     # 中文感叹号
-    "？",     # 中文问号
-    ".",      # 英文句号
-    "!",      # 英文感叹号
-    "?",      # 英文问号
-    "；",     # 中文分号
-    ";",      # 英文分号
-    "，",     # 中文逗号
-    ",",      # 英文逗号
-    " ",      # 空格
-    "",       # 单字符（最后手段）
+    "\n\n",  # 段落分隔
+    "\n",  # 行分隔
+    "。",  # 中文句号
+    "！",  # 中文感叹号
+    "？",  # 中文问号
+    ".",  # 英文句号
+    "!",  # 英文感叹号
+    "?",  # 英文问号
+    "；",  # 中文分号
+    ";",  # 英文分号
+    "，",  # 中文逗号
+    ",",  # 英文逗号
+    " ",  # 空格
+    "",  # 单字符（最后手段）
 ]
 
 
@@ -428,7 +427,7 @@ def _force_split(text: str, chunk_size: int) -> list[str]:
     """强制按固定长度切分文本（最后手段）"""
     chunks = []
     for i in range(0, len(text), chunk_size):
-        chunk = text[i:i + chunk_size]
+        chunk = text[i : i + chunk_size]
         if chunk:
             chunks.append(chunk)
     return chunks
@@ -490,7 +489,7 @@ async def generate_embeddings(texts: list[str]) -> list[list[float]]:
         batch_size = 20
 
         for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
+            batch = texts[i : i + batch_size]
             batch_embeddings = await _call_embedding_api(batch)
             all_embeddings.extend(batch_embeddings)
 

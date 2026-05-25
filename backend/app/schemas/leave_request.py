@@ -6,7 +6,6 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -21,14 +20,14 @@ class LeaveRequestCreate(BaseModel):
     start_date: date = Field(description="开始日期")
     end_date: date = Field(description="结束日期")
     days: Decimal = Field(gt=0, description="请假天数")
-    reason: Optional[str] = Field(default=None, description="请假原因")
+    reason: str | None = Field(default=None, description="请假原因")
 
 
 class LeaveApprovalAction(BaseModel):
     """请假审批操作请求模型"""
 
     action: str = Field(pattern=r"^(approve|reject)$", description="审批动作（approve=通过, reject=驳回）")
-    approver_remark: Optional[str] = Field(default=None, description="审批备注")
+    approver_remark: str | None = Field(default=None, description="审批备注")
 
 
 class LeaveRequestResponse(BaseModel):
@@ -37,21 +36,21 @@ class LeaveRequestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     leave_id: int = Field(description="请假记录ID")
-    emp_id: Optional[int] = Field(default=None, description="员工ID")
-    leave_type: Optional[str] = Field(default=None, description="请假类型")
-    start_date: Optional[date] = Field(default=None, description="开始日期")
-    end_date: Optional[date] = Field(default=None, description="结束日期")
-    days: Optional[Decimal] = Field(default=None, description="请假天数")
-    reason: Optional[str] = Field(default=None, description="请假原因")
-    status: Optional[str] = Field(default=None, description="审批状态")
-    approver_id: Optional[int] = Field(default=None, description="审批人ID")
-    pending_approver_tag: Optional[str] = Field(default=None, description="当前待审批人身份标签")
-    pending_approver_scope: Optional[str] = Field(default=None, description="当前待审批人数据范围")
-    next_approver_tag: Optional[str] = Field(default=None, description="下一级审批人身份标签")
-    next_approver_scope: Optional[str] = Field(default=None, description="下一级审批人数据范围")
-    apply_time: Optional[datetime] = Field(default=None, description="申请时间")
-    approve_time: Optional[datetime] = Field(default=None, description="审批时间")
-    approve_remark: Optional[str] = Field(default=None, description="审批备注")
+    emp_id: int | None = Field(default=None, description="员工ID")
+    leave_type: str | None = Field(default=None, description="请假类型")
+    start_date: date | None = Field(default=None, description="开始日期")
+    end_date: date | None = Field(default=None, description="结束日期")
+    days: Decimal | None = Field(default=None, description="请假天数")
+    reason: str | None = Field(default=None, description="请假原因")
+    status: str | None = Field(default=None, description="审批状态")
+    approver_id: int | None = Field(default=None, description="审批人ID")
+    pending_approver_tag: str | None = Field(default=None, description="当前待审批人身份标签")
+    pending_approver_scope: str | None = Field(default=None, description="当前待审批人数据范围")
+    next_approver_tag: str | None = Field(default=None, description="下一级审批人身份标签")
+    next_approver_scope: str | None = Field(default=None, description="下一级审批人数据范围")
+    apply_time: datetime | None = Field(default=None, description="申请时间")
+    approve_time: datetime | None = Field(default=None, description="审批时间")
+    approve_remark: str | None = Field(default=None, description="审批备注")
 
 
 class LeaveRequestQuery(BaseModel):
@@ -59,5 +58,5 @@ class LeaveRequestQuery(BaseModel):
 
     page: int = Field(default=1, ge=1, description="页码（从1开始）")
     size: int = Field(default=10, ge=1, le=500, description="每页大小")
-    emp_id: Optional[int] = Field(default=None, description="员工ID筛选")
-    status: Optional[str] = Field(default=None, description="审批状态筛选")
+    emp_id: int | None = Field(default=None, description="员工ID筛选")
+    status: str | None = Field(default=None, description="审批状态筛选")

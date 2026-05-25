@@ -10,7 +10,6 @@
 """
 
 from datetime import datetime
-from typing import List
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -28,7 +27,7 @@ router = APIRouter()
 class DeptModulesUpdate(BaseModel):
     """部门模块权限更新请求"""
 
-    module_codes: List[str] = Field(default_factory=list, alias="moduleCodes", description="模块编码列表")
+    module_codes: list[str] = Field(default_factory=list, alias="moduleCodes", description="模块编码列表")
 
     class Config:
         populate_by_name = True
@@ -69,9 +68,7 @@ async def update_dept_modules(
     说明：先删除该部门现有的所有模块权限，然后批量插入新的模块列表。
     """
     # 删除现有记录
-    await db.execute(
-        delete(DeptPermissionTemplate).where(DeptPermissionTemplate.dept_id == dept_id)
-    )
+    await db.execute(delete(DeptPermissionTemplate).where(DeptPermissionTemplate.dept_id == dept_id))
 
     # 批量插入新记录
     now = datetime.now()

@@ -39,14 +39,13 @@
     # chain = {"first_approver_tag": "MANAGER", "second_approver_tag": "HR_SPECIALIST"}
 """
 
-from typing import Optional
+from decimal import Decimal
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.approval import ApprovalRule
 from app.models.module_scope import ModuleScopeDetail, ModuleScopeRule
-
 
 # ============================================================
 # Layer 1: 角色权限检查
@@ -85,7 +84,7 @@ def check_role_permission(user_permissions: list[str], required: list[str]) -> b
 # ============================================================
 
 
-def check_identity_tag(user_tag: Optional[str], required_tags: list[str]) -> bool:
+def check_identity_tag(user_tag: str | None, required_tags: list[str]) -> bool:
     """
     Layer 2: 检查用户身份标签是否匹配业务要求
 
@@ -117,9 +116,7 @@ def check_identity_tag(user_tag: Optional[str], required_tags: list[str]) -> boo
 # ============================================================
 
 
-async def get_data_scope(
-    db: AsyncSession, role_id: int, module_code: str, identity_tag: Optional[str] = None
-) -> str:
+async def get_data_scope(db: AsyncSession, role_id: int, module_code: str, identity_tag: str | None = None) -> str:
     """
     Layer 3: 获取用户在指定模块中的数据可见范围
 
@@ -158,9 +155,7 @@ async def get_data_scope(
             return detail_scope
 
     # 回退到模块默认范围
-    rule_stmt = select(ModuleScopeRule.default_scope).where(
-        ModuleScopeRule.module_code == module_code
-    )
+    rule_stmt = select(ModuleScopeRule.default_scope).where(ModuleScopeRule.module_code == module_code)
     rule_result = await db.execute(rule_stmt)
     default_scope = rule_result.scalar_one_or_none()
 
@@ -177,7 +172,7 @@ async def get_approval_chain(
     type_code: str,
     applicant_tag: str,
     days: int,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Layer 4: 根据条件匹配审批链
 
@@ -235,9 +230,7 @@ async def get_approval_chain(
     return None
 
 
-def _match_days_condition(
-    days_op: Optional[str], days_value: Optional[object], actual_days: int
-) -> bool:
+def _match_days_condition(days_op: str | None, days_value: float | int | Decimal | None, actual_days: int) -> bool:
     """
     匹配天数条件
 

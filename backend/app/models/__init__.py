@@ -10,31 +10,31 @@ ORM 模型包（models）
 """
 
 from app.core.database import Base
+from app.models.agent import AgentApprovalRecord, AgentExecutionLog, AgentTask
 
-# 核心业务模型
-from app.models.employee import Employee
-from app.models.department import Department
-from app.models.job_position import JobPosition
+# AI 相关模型
+from app.models.ai_chat import AiChatMessage
+from app.models.approval import ApprovalRule, ApprovalRuleType, DeptPermissionTemplate
 
 # 考勤和请假模型
 from app.models.attendance import Attendance
+from app.models.department import Department
+
+# 核心业务模型
+from app.models.employee import Employee
+from app.models.identity_tag import IdentityTag
+from app.models.job_position import JobPosition
 from app.models.leave_request import LeaveRequest
+from app.models.module_scope import ModuleScopeDetail, ModuleScopeRule
+from app.models.permission import Permission
+from app.models.role import Role
+from app.models.role_permission import RolePermission
 
 # 薪资模型
 from app.models.salary import SalaryConfig, SalaryRecord
 
 # 用户和权限模型
 from app.models.sys_user import SysUser
-from app.models.role import Role
-from app.models.permission import Permission
-from app.models.role_permission import RolePermission
-from app.models.identity_tag import IdentityTag
-from app.models.module_scope import ModuleScopeRule, ModuleScopeDetail
-from app.models.approval import ApprovalRule, ApprovalRuleType, DeptPermissionTemplate
-
-# AI 相关模型
-from app.models.ai_chat import AiChatMessage
-from app.models.agent import AgentTask, AgentExecutionLog, AgentApprovalRecord
 
 __all__ = [
     "Base",

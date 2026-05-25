@@ -36,7 +36,6 @@ Java 对应关系：
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 import networkx as nx
 from sqlalchemy import text
@@ -75,7 +74,7 @@ class HRKnowledgeGraph:
     def __init__(self):
         """初始化知识图谱（空图）"""
         self._graph: nx.DiGraph = nx.DiGraph()
-        self._last_sync: Optional[datetime] = None
+        self._last_sync: datetime | None = None
         self._node_count: int = 0
         self._edge_count: int = 0
 
@@ -85,7 +84,7 @@ class HRKnowledgeGraph:
         return self._graph
 
     @property
-    def last_sync(self) -> Optional[datetime]:
+    def last_sync(self) -> datetime | None:
         """获取最后一次同步时间"""
         return self._last_sync
 
@@ -154,9 +153,7 @@ class HRKnowledgeGraph:
 
         elapsed = (datetime.now() - start_time).total_seconds()
         logger.info(
-            f"知识图谱构建完成: "
-            f"nodes={self._node_count}, edges={self._edge_count}, "
-            f"time={elapsed:.2f}s"
+            f"知识图谱构建完成: " f"nodes={self._node_count}, edges={self._edge_count}, " f"time={elapsed:.2f}s"
         )
 
         return {
@@ -168,9 +165,7 @@ class HRKnowledgeGraph:
 
     async def _build_departments(self, db: AsyncSession) -> int:
         """构建部门节点和层级关系"""
-        result = await db.execute(
-            text("SELECT dept_id, dept_name, parent_id FROM department")
-        )
+        result = await db.execute(text("SELECT dept_id, dept_name, parent_id FROM department"))
         rows = result.fetchall()
         count = 0
 
@@ -202,9 +197,7 @@ class HRKnowledgeGraph:
 
     async def _build_positions(self, db: AsyncSession) -> int:
         """构建职位节点"""
-        result = await db.execute(
-            text("SELECT position_id, position_name, dept_id FROM job_position")
-        )
+        result = await db.execute(text("SELECT position_id, position_name, dept_id FROM job_position"))
         rows = result.fetchall()
         count = 0
 
@@ -236,9 +229,7 @@ class HRKnowledgeGraph:
 
     async def _build_roles(self, db: AsyncSession) -> int:
         """构建角色节点"""
-        result = await db.execute(
-            text("SELECT role_id, role_name, role_desc FROM role")
-        )
+        result = await db.execute(text("SELECT role_id, role_name, role_desc FROM role"))
         rows = result.fetchall()
         count = 0
 
@@ -318,9 +309,7 @@ class HRKnowledgeGraph:
         logger.debug(f"员工节点: {count}")
         return count
 
-    def query_relationships(
-        self, entity_name: str, max_hops: int = 4
-    ) -> list[dict]:
+    def query_relationships(self, entity_name: str, max_hops: int = 4) -> list[dict]:
         """
         多跳关系查询
 
@@ -363,9 +352,7 @@ class HRKnowledgeGraph:
 
         for start_node in start_nodes:
             # 使用 NetworkX 的 BFS 边遍历
-            bfs_edges = nx.bfs_edges(
-                self._graph, start_node, depth_limit=max_hops
-            )
+            bfs_edges = nx.bfs_edges(self._graph, start_node, depth_limit=max_hops)
 
             for source, target in bfs_edges:
                 edge_key = (source, target)
@@ -380,28 +367,25 @@ class HRKnowledgeGraph:
 
                 # 计算跳数（从起始节点到 source 的距离 + 1）
                 try:
-                    hops = nx.shortest_path_length(
-                        self._graph, start_node, target
-                    )
+                    hops = nx.shortest_path_length(self._graph, start_node, target)
                 except nx.NetworkXNoPath:
                     hops = max_hops
 
-                results.append({
-                    "source": source,
-                    "source_name": source_attrs.get("name", source),
-                    "source_type": source_attrs.get("type", "unknown"),
-                    "relation": edge_attrs.get("relation", "related"),
-                    "label": edge_attrs.get("label", ""),
-                    "target": target,
-                    "target_name": target_attrs.get("name", target),
-                    "target_type": target_attrs.get("type", "unknown"),
-                    "hops": hops,
-                })
+                results.append(
+                    {
+                        "source": source,
+                        "source_name": source_attrs.get("name", source),
+                        "source_type": source_attrs.get("type", "unknown"),
+                        "relation": edge_attrs.get("relation", "related"),
+                        "label": edge_attrs.get("label", ""),
+                        "target": target,
+                        "target_name": target_attrs.get("name", target),
+                        "target_type": target_attrs.get("type", "unknown"),
+                        "hops": hops,
+                    }
+                )
 
-        logger.info(
-            f"关系查询: entity='{entity_name}', "
-            f"start_nodes={len(start_nodes)}, results={len(results)}"
-        )
+        logger.info(f"关系查询: entity='{entity_name}', " f"start_nodes={len(start_nodes)}, results={len(results)}")
         return results
 
     def get_visualization_data(self) -> dict:
@@ -448,23 +432,27 @@ class HRKnowledgeGraph:
         nodes = []
         for node_id, attrs in self._graph.nodes(data=True):
             node_type = attrs.get("type", "unknown")
-            nodes.append({
-                "id": node_id,
-                "name": attrs.get("name", node_id),
-                "type": node_type,
-                "category": category_map.get(node_type, 0),
-                "entity_id": attrs.get("entity_id"),
-            })
+            nodes.append(
+                {
+                    "id": node_id,
+                    "name": attrs.get("name", node_id),
+                    "type": node_type,
+                    "category": category_map.get(node_type, 0),
+                    "entity_id": attrs.get("entity_id"),
+                }
+            )
 
         # 构建边列表
         edges = []
         for source, target, attrs in self._graph.edges(data=True):
-            edges.append({
-                "source": source,
-                "target": target,
-                "relation": attrs.get("relation", "related"),
-                "label": attrs.get("label", ""),
-            })
+            edges.append(
+                {
+                    "source": source,
+                    "target": target,
+                    "relation": attrs.get("relation", "related"),
+                    "label": attrs.get("label", ""),
+                }
+            )
 
         # 分类定义
         categories = [

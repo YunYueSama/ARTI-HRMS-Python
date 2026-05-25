@@ -125,12 +125,15 @@ def _get_category_instruction(category: str) -> str:
 2. 不要把推测说成事实。
 3. 在说明限制后，可以给通用建议或建议主人换一种问法。""",
     }
-    return instructions.get(category, """\
+    return instructions.get(
+        category,
+        """\
 当前问题类型：日常聊天。
 回答优先级：
 1. 保持自然、轻快、陪伴式的对话节奏。
 2. 适度主动接话，但不要黏人或强行延长对话。
-3. 用亚托莉的语气陪主人继续聊下去。""")
+3. 用亚托莉的语气陪主人继续聊下去。""",
+    )
 
 
 def _build_grounding_section(knowledge_context: str) -> str:
@@ -139,15 +142,8 @@ def _build_grounding_section(knowledge_context: str) -> str:
     base = f"当前日期：{today}"
 
     if knowledge_context.strip():
-        return (
-            f"{base}\n\n"
-            "以下是系统中刚刚读取到的真实只读数据，请优先基于这些事实回答：\n"
-            f"{knowledge_context}"
-        )
-    return (
-        f"{base}\n\n"
-        "这轮没有命中明确的系统数据工具，可以正常聊天，或给出流程解释与通用建议。"
-    )
+        return f"{base}\n\n" "以下是系统中刚刚读取到的真实只读数据，请优先基于这些事实回答：\n" f"{knowledge_context}"
+    return f"{base}\n\n" "这轮没有命中明确的系统数据工具，可以正常聊天，或给出流程解释与通用建议。"
 
 
 # ============================================================

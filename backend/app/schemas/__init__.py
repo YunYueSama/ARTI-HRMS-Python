@@ -10,105 +10,104 @@ Pydantic Schema 层（schemas/__init__.py）
 """
 
 # 通用响应模型
-from app.schemas.common import ApiResponse, PageResponse, ok, fail
-
-# 认证相关
-from app.schemas.auth import (
-    LoginRequest,
-    LoginResponse,
-    UserProfile,
-    ChangePasswordRequest,
-    ResetPasswordRequest,
-    PasswordCheckRequest,
-    PasswordStrengthResponse,
-    UserView,
+# Agent 相关
+from app.schemas.agent import (
+    AgentPlan,
+    AgentPlanEntity,
+    AgentPlanStep,
+    AgentTaskView,
+    ApproveRequest,
+    DraftPlan,
+    IntentType,
+    MessageCategory,
+    PlanRequest,
+    RiskLevel,
 )
 
-# 员工相关
-from app.schemas.employee import (
-    EmployeeCreate,
-    EmployeeUpdate,
-    EmployeeResponse,
-    EmployeeQuery,
-)
-
-# 部门相关
-from app.schemas.department import (
-    DepartmentCreate,
-    DepartmentUpdate,
-    DepartmentResponse,
+# AI 聊天相关
+from app.schemas.ai_chat import (
+    ChatHistoryQuery,
+    ChatMessageResponse,
+    ChatRequest,
 )
 
 # 考勤相关
 from app.schemas.attendance import (
     AttendanceCreate,
-    AttendanceUpdate,
-    AttendanceResponse,
     AttendanceQuery,
+    AttendanceResponse,
+    AttendanceUpdate,
+)
+
+# 认证相关
+from app.schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    LoginResponse,
+    PasswordCheckRequest,
+    PasswordStrengthResponse,
+    ResetPasswordRequest,
+    UserProfile,
+    UserView,
+)
+from app.schemas.common import ApiResponse, PageResponse, fail, ok
+
+# 部门相关
+from app.schemas.department import (
+    DepartmentCreate,
+    DepartmentResponse,
+    DepartmentUpdate,
+)
+
+# 员工相关
+from app.schemas.employee import (
+    EmployeeCreate,
+    EmployeeQuery,
+    EmployeeResponse,
+    EmployeeUpdate,
 )
 
 # 请假相关
 from app.schemas.leave_request import (
-    LeaveRequestCreate,
     LeaveApprovalAction,
-    LeaveRequestResponse,
+    LeaveRequestCreate,
     LeaveRequestQuery,
+    LeaveRequestResponse,
+)
+
+# NLP 相关
+from app.schemas.nlp import (
+    EntityItem,
+    KeywordExtractRequest,
+    KeywordExtractResponse,
+    KeywordItem,
+    SentimentAnalyzeRequest,
+    SentimentAnalyzeResponse,
+    SentimentResult,
+    TextAnalyzeRequest,
+    TextAnalyzeResponse,
+)
+
+# 权限与角色相关
+from app.schemas.permission import (
+    DepartmentStat,
+    PermissionResponse,
+    ReportSummary,
+    RoleCreate,
+    RolePermissionUpdateRequest,
+    RoleResponse,
+    RoleUpdate,
 )
 
 # 薪资相关
 from app.schemas.salary import (
     SalaryConfigCreate,
-    SalaryConfigUpdate,
     SalaryConfigResponse,
+    SalaryConfigUpdate,
     SalaryRecordCreate,
-    SalaryRecordUpdate,
-    SalaryRecordResponse,
     SalaryRecordQuery,
-)
-
-# 权限与角色相关
-from app.schemas.permission import (
-    RoleCreate,
-    RoleUpdate,
-    RoleResponse,
-    PermissionResponse,
-    RolePermissionUpdateRequest,
-    DepartmentStat,
-    ReportSummary,
-)
-
-# AI 聊天相关
-from app.schemas.ai_chat import (
-    ChatRequest,
-    ChatMessageResponse,
-    ChatHistoryQuery,
-)
-
-# Agent 相关
-from app.schemas.agent import (
-    IntentType,
-    RiskLevel,
-    MessageCategory,
-    PlanRequest,
-    ApproveRequest,
-    DraftPlan,
-    AgentPlanStep,
-    AgentPlanEntity,
-    AgentPlan,
-    AgentTaskView,
-)
-
-# NLP 相关
-from app.schemas.nlp import (
-    TextAnalyzeRequest,
-    TextAnalyzeResponse,
-    EntityItem,
-    SentimentResult,
-    KeywordItem,
-    KeywordExtractRequest,
-    KeywordExtractResponse,
-    SentimentAnalyzeRequest,
-    SentimentAnalyzeResponse,
+    SalaryRecordResponse,
+    SalaryRecordUpdate,
 )
 
 __all__ = [

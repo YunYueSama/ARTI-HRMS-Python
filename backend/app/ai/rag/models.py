@@ -22,20 +22,10 @@ RAG 数据模型和 pgvector 连接（ai/rag/models.py）
 """
 
 from datetime import datetime
-from typing import Optional
-
-from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    func,
-)
-from sqlalchemy.orm import relationship
 
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config import settings
 from app.core.database import PgVectorBase
@@ -62,26 +52,27 @@ class RagDocument(PgVectorBase):
         upload_time: 上传时间
         processed_time: 处理完成时间
     """
+
     __tablename__ = "rag_document"
 
-    doc_id: int = Column(Integer, primary_key=True, autoincrement=True, comment="文档ID")
-    filename: str = Column(String(500), nullable=False, comment="原始文件名")
-    file_type: str = Column(String(20), nullable=False, comment="文件类型(pdf/docx/md/txt)")
-    file_size: int = Column(Integer, nullable=False, default=0, comment="文件大小(字节)")
-    chunk_count: int = Column(Integer, nullable=False, default=0, comment="分块数量")
-    status: str = Column(
+    doc_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="文档ID")
+    filename: Mapped[str] = mapped_column(String(500), nullable=False, comment="原始文件名")
+    file_type: Mapped[str] = mapped_column(String(20), nullable=False, comment="文件类型(pdf/docx/md/txt)")
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="文件大小(字节)")
+    chunk_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="分块数量")
+    status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default="uploading",
         comment="处理状态(uploading/processing/ready/failed)",
     )
-    upload_time: datetime = Column(
+    upload_time: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         server_default=func.now(),
         comment="上传时间",
     )
-    processed_time: Optional[datetime] = Column(
+    processed_time: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
         comment="处理完成时间",
@@ -118,24 +109,25 @@ class RagChunk(PgVectorBase):
         token_count: 分块的 Token 数量
         create_time: 创建时间
     """
+
     __tablename__ = "rag_chunk"
 
-    chunk_id: int = Column(Integer, primary_key=True, autoincrement=True, comment="分块ID")
-    doc_id: int = Column(
+    chunk_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="分块ID")
+    doc_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("rag_document.doc_id", ondelete="CASCADE"),
         nullable=False,
         comment="所属文档ID",
     )
-    chunk_index: int = Column(Integer, nullable=False, default=0, comment="分块序号")
-    content: str = Column(Text, nullable=False, comment="分块文本内容")
-    embedding = Column(
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="分块序号")
+    content: Mapped[str] = mapped_column(Text, nullable=False, comment="分块文本内容")
+    embedding = mapped_column(
         Vector(settings.EMBEDDING_DIMENSIONS),
         nullable=True,
         comment="向量嵌入",
     )
-    token_count: int = Column(Integer, nullable=False, default=0, comment="Token数量")
-    create_time: datetime = Column(
+    token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment="Token数量")
+    create_time: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         server_default=func.now(),

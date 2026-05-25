@@ -72,13 +72,13 @@ async def create_department(data: DepartmentCreate, db: AsyncSession) -> Departm
     db.add(department)
     await db.flush()
     await db.refresh(department)
-    return DepartmentResponse.model_validate(department)
+    return DepartmentResponse.model_validate(department)  # type: ignore[no-any-return]
 
 
 async def update_department(dept_id: int, data: DepartmentUpdate, db: AsyncSession) -> DepartmentResponse:
     """更新部门信息（部分更新）"""
     result = await db.execute(select(Department).where(Department.dept_id == dept_id))
-    department = result.scalar_one_or_none()
+    department: Department | None = result.scalar_one_or_none()
     if not department:
         raise NotFoundException(message="部门不存在", detail=f"dept_id={dept_id}")
 
@@ -104,9 +104,7 @@ async def delete_department(dept_id: int, db: AsyncSession) -> None:
         raise NotFoundException(message="部门不存在", detail=f"dept_id={dept_id}")
 
     # 检查是否有员工引用该部门
-    emp_count_result = await db.execute(
-        select(func.count()).select_from(Employee).where(Employee.dept_id == dept_id)
-    )
+    emp_count_result = await db.execute(select(func.count()).select_from(Employee).where(Employee.dept_id == dept_id))
     emp_count = emp_count_result.scalar() or 0
     if emp_count > 0:
         raise BusinessException(

@@ -6,7 +6,7 @@
 """
 
 from datetime import date, datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,9 +67,9 @@ async def get_summary(db: AsyncSession) -> ReportSummary:
     if attendance_total == 0:
         attendance_rate = Decimal("0.0")
     else:
-        attendance_rate = (
-            Decimal(attendance_normal) * Decimal("100") / Decimal(attendance_total)
-        ).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        attendance_rate = (Decimal(attendance_normal) * Decimal("100") / Decimal(attendance_total)).quantize(
+            Decimal("0.1"), rounding=ROUND_HALF_UP
+        )
 
     # 本月请假人次
     month_start_dt = datetime(today.year, today.month, 1)
@@ -89,25 +89,22 @@ async def get_summary(db: AsyncSession) -> ReportSummary:
     department_stats: list[DepartmentStat] = []
     for dept in departments:
         emp_count_result = await db.execute(
-            select(func.count())
-            .select_from(Employee)
-            .where(Employee.dept_id == dept.dept_id)
+            select(func.count()).select_from(Employee).where(Employee.dept_id == dept.dept_id)
         )
         emp_count = emp_count_result.scalar() or 0
-        department_stats.append(
-            DepartmentStat(name=dept.dept_name or "未命名", value=emp_count)
-        )
+        department_stats.append(DepartmentStat(name=dept.dept_name or "未命名", value=emp_count))
 
     return ReportSummary(
-        total_employees=total_employees,
-        new_employees_this_month=new_employees_this_month,
-        attendance_rate=attendance_rate,
-        leave_count=leave_count,
-        department_stats=department_stats,
+        total_employees=total_employees,  # type: ignore[call-arg]
+        new_employees_this_month=new_employees_this_month,  # type: ignore[call-arg]
+        attendance_rate=attendance_rate,  # type: ignore[call-arg]
+        leave_count=leave_count,  # type: ignore[call-arg]
+        department_stats=department_stats,  # type: ignore[call-arg]
     )
 
 
 def _last_day_of_month(d: date) -> int:
     """获取指定日期所在月份的最后一天"""
     import calendar
+
     return calendar.monthrange(d.year, d.month)[1]

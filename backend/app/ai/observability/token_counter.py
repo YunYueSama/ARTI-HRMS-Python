@@ -24,10 +24,9 @@ Token 统计和费用估算（ai/observability/token_counter.py）
 """
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, date
-from typing import Optional
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +35,11 @@ logger = logging.getLogger(__name__)
 # ============================================================
 try:
     import tiktoken
+
     TIKTOKEN_AVAILABLE = True
 except ImportError:
     TIKTOKEN_AVAILABLE = False
-    logger.warning(
-        "tiktoken 未安装，Token 计数将使用近似估算。"
-        "安装方式: pip install tiktoken"
-    )
+    logger.warning("tiktoken 未安装，Token 计数将使用近似估算。" "安装方式: pip install tiktoken")
 
 
 # ============================================================
@@ -95,7 +92,7 @@ def count_tokens(text: str, model: str = "gpt-4") -> int:
     except KeyError:
         # 模型不在 tiktoken 支持列表中，使用 cl100k_base（GPT-4 编码器）
         try:
-            encoding = tiktoken.get_encoding("cl100k_base")
+            encoding = tiktoken.get_encoding("cl100k_base")  # type: ignore[assignment]
         except Exception:
             # 最终回退：字符数近似
             return max(1, len(text) // 2)
@@ -161,6 +158,7 @@ class TokenUsageRecord:
         cost: 本次调用费用（人民币元）
         timestamp: 记录时间戳
     """
+
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
@@ -173,9 +171,7 @@ class TokenUsageRecord:
         if self.total_tokens == 0:
             self.total_tokens = self.input_tokens + self.output_tokens
         if self.cost == 0.0 and (self.input_tokens > 0 or self.output_tokens > 0):
-            self.cost = calculate_cost(
-                self.input_tokens, self.output_tokens, self.model
-            )
+            self.cost = calculate_cost(self.input_tokens, self.output_tokens, self.model)
 
 
 def aggregate_daily_usage(records: list[TokenUsageRecord]) -> dict[str, dict]:

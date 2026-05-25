@@ -8,7 +8,6 @@
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -24,13 +23,13 @@ class ModuleScopeRule(Base):
     # 模块编码（主键，字符串类型）
     module_code: Mapped[str] = mapped_column(String(50), primary_key=True)
     # 模块名称
-    module_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    module_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # 默认数据范围（self/dept/all 等）
-    default_scope: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    default_scope: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # 更新时间
-    update_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    update_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ModuleScopeDetail(Base):
@@ -41,12 +40,12 @@ class ModuleScopeDetail(Base):
     # 明细ID（主键，自增）
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 模块编码
-    module_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    module_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 身份标签编码
-    tag_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    tag_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 数据范围（self/dept/all 等）
-    scope: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    scope: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # 更新时间
-    update_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    update_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

@@ -15,10 +15,8 @@ Java 对应关系：
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 # ============================================================
 # 登录相关
@@ -37,21 +35,19 @@ class UserProfile(BaseModel):
 
     user_id: int = Field(description="用户ID")
     username: str = Field(description="用户名")
-    emp_id: Optional[int] = Field(default=None, description="关联员工ID")
-    emp_name: Optional[str] = Field(default=None, description="员工姓名")
-    dept_id: Optional[int] = Field(default=None, description="部门ID")
-    dept_name: Optional[str] = Field(default=None, description="部门名称")
-    position_id: Optional[int] = Field(default=None, description="职位ID")
-    position_name: Optional[str] = Field(default=None, description="职位名称")
-    role_id: Optional[int] = Field(default=None, description="角色ID")
-    role_name: Optional[str] = Field(default=None, description="角色名称")
-    role_code: Optional[str] = Field(default=None, description="角色编码")
-    identity_tag: Optional[str] = Field(default=None, description="身份标签")
-    status: Optional[str] = Field(default=None, description="账号状态")
+    emp_id: int | None = Field(default=None, description="关联员工ID")
+    emp_name: str | None = Field(default=None, description="员工姓名")
+    dept_id: int | None = Field(default=None, description="部门ID")
+    dept_name: str | None = Field(default=None, description="部门名称")
+    position_id: int | None = Field(default=None, description="职位ID")
+    position_name: str | None = Field(default=None, description="职位名称")
+    role_id: int | None = Field(default=None, description="角色ID")
+    role_name: str | None = Field(default=None, description="角色名称")
+    role_code: str | None = Field(default=None, description="角色编码")
+    identity_tag: str | None = Field(default=None, description="身份标签")
+    status: str | None = Field(default=None, description="账号状态")
     permissions: list[str] = Field(default_factory=list, description="权限码列表")
-    approval_assignee_tags: list[str] = Field(
-        default_factory=list, description="审批指派标签列表"
-    )
+    approval_assignee_tags: list[str] = Field(default_factory=list, description="审批指派标签列表")
 
 
 class LoginResponse(BaseModel):
@@ -108,11 +104,11 @@ class UserView(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: int = Field(description="用户ID")
-    username: Optional[str] = Field(default=None, description="用户名")
-    emp_id: Optional[int] = Field(default=None, description="关联员工ID")
-    emp_name: Optional[str] = Field(default=None, description="员工姓名")
-    role_id: Optional[int] = Field(default=None, description="角色ID")
-    role_name: Optional[str] = Field(default=None, description="角色名称")
-    status: Optional[str] = Field(default=None, description="账号状态")
-    last_login: Optional[datetime] = Field(default=None, description="最后登录时间")
-    create_time: Optional[datetime] = Field(default=None, description="创建时间")
+    username: str | None = Field(default=None, description="用户名")
+    emp_id: int | None = Field(default=None, description="关联员工ID")
+    emp_name: str | None = Field(default=None, description="员工姓名")
+    role_id: int | None = Field(default=None, description="角色ID")
+    role_name: str | None = Field(default=None, description="角色名称")
+    status: str | None = Field(default=None, description="账号状态")
+    last_login: datetime | None = Field(default=None, description="最后登录时间")
+    create_time: datetime | None = Field(default=None, description="创建时间")

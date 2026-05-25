@@ -17,41 +17,41 @@ HRMS Python 后端主入口（main.py）
     5. 挂载路由（各业务模块的 API 端点）
 """
 
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import init_engines, close_engines
+from app.core.database import close_engines, init_engines
 from app.core.exceptions import register_exception_handlers
-from app.routers.auth import router as auth_router
-from app.routers.employees import router as employee_router
-from app.routers.departments import router as department_router
-from app.routers.job_positions import router as job_position_router
+from app.routers.agent_tasks import router as agent_task_router
+from app.routers.ai_chat import router as ai_chat_router
+from app.routers.approval_rule_types import router as approval_rule_type_router
+from app.routers.approval_rules import router as approval_rule_router
 from app.routers.attendance import router as attendance_router
+from app.routers.auth import router as auth_router
+from app.routers.config import router as config_router
+from app.routers.departments import router as department_router
+from app.routers.dept_permission_templates import router as dept_permission_template_router
+from app.routers.employees import router as employee_router
+from app.routers.job_positions import router as job_position_router
+from app.routers.knowledge_graph import router as knowledge_graph_router
 from app.routers.leave_requests import router as leave_request_router
+from app.routers.module_scope_rules import router as module_scope_rule_router
+from app.routers.multimodal import router as multimodal_router
+from app.routers.nlp import router as nlp_router
+from app.routers.observability import router as observability_router
+from app.routers.permissions import router as permission_router
+from app.routers.rag import router as rag_router
+from app.routers.reports import router as report_router
+from app.routers.role_permissions import router as role_permission_router
+from app.routers.roles import router as role_router
 from app.routers.salary_configs import router as salary_config_router
 from app.routers.salary_records import router as salary_record_router
 from app.routers.users import router as user_router
-from app.routers.roles import router as role_router
-from app.routers.permissions import router as permission_router
-from app.routers.role_permissions import router as role_permission_router
-from app.routers.reports import router as report_router
-from app.routers.ai_chat import router as ai_chat_router
-from app.routers.agent_tasks import router as agent_task_router
-from app.routers.rag import router as rag_router
-from app.routers.observability import router as observability_router
-from app.routers.multimodal import router as multimodal_router
-from app.routers.knowledge_graph import router as knowledge_graph_router
-from app.routers.config import router as config_router
-from app.routers.nlp import router as nlp_router
-from app.routers.module_scope_rules import router as module_scope_rule_router
-from app.routers.approval_rules import router as approval_rule_router
-from app.routers.approval_rule_types import router as approval_rule_type_router
-from app.routers.dept_permission_templates import router as dept_permission_template_router
 
 # 配置日志
 logging.basicConfig(
@@ -111,9 +111,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             async with MySQLSessionFactory() as session:
                 stats = await hr_knowledge_graph.build_from_database(session)
                 await session.commit()
-                logger.info(
-                    f"  知识图谱已自动构建: 节点={stats['nodes']}, 边={stats['edges']}"
-                )
+                logger.info(f"  知识图谱已自动构建: 节点={stats['nodes']}, 边={stats['edges']}")
     except Exception as e:
         logger.warning(f"  知识图谱自动构建失败（可在登录后手动同步）: {e}")
 
@@ -176,9 +174,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,  # 允许的前端域名列表
-    allow_credentials=True,                     # 允许携带 Cookie
-    allow_methods=["*"],                        # 允许所有 HTTP 方法
-    allow_headers=["*"],                        # 允许所有请求头
+    allow_credentials=True,  # 允许携带 Cookie
+    allow_methods=["*"],  # 允许所有 HTTP 方法
+    allow_headers=["*"],  # 允许所有请求头
 )
 
 

@@ -24,7 +24,6 @@ import logging
 import os
 import tempfile
 from datetime import datetime
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy import delete, func, select
@@ -35,8 +34,8 @@ from app.ai.rag.pipeline import ingest_document
 from app.ai.rag.retriever import get_document_chunks, search
 from app.core.config import settings
 from app.core.database import get_pgvector_session
-from app.core.dependencies import get_current_user, TokenPayload
-from app.schemas.common import ApiResponse, PageResponse, ok, fail
+from app.core.dependencies import TokenPayload, get_current_user
+from app.schemas.common import ApiResponse, PageResponse, fail, ok
 from app.schemas.rag import (
     ChunkPreviewResponse,
     DocumentListResponse,
@@ -81,9 +80,7 @@ async def upload_document(
     # 提取文件扩展名
     file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
     if file_ext not in ALLOWED_FILE_TYPES:
-        return fail(
-            message=f"不支持的文件类型: .{file_ext}，支持: {', '.join(ALLOWED_FILE_TYPES)}"
-        )
+        return fail(message=f"不支持的文件类型: .{file_ext}，支持: {', '.join(ALLOWED_FILE_TYPES)}")
 
     # 读取文件内容并校验大小
     content = await file.read()
@@ -156,7 +153,7 @@ async def list_documents(
 
     # 优雅降级：pgvector 不可用时直接返回空列表
     if PgVectorSessionFactory is None:
-        empty_page = PageResponse(items=[], total=0, page=page, size=size)
+        empty_page: PageResponse = PageResponse(items=[], total=0, page=page, size=size)
         return ok(
             data=empty_page,
             message="向量数据库尚未启动，RAG 知识库当前不可用。请先启动 PostgreSQL + pgvector。",
@@ -171,12 +168,7 @@ async def list_documents(
 
             # 查询分页数据
             offset = (page - 1) * size
-            stmt = (
-                select(RagDocument)
-                .order_by(RagDocument.upload_time.desc())
-                .offset(offset)
-                .limit(size)
-            )
+            stmt = select(RagDocument).order_by(RagDocument.upload_time.desc()).offset(offset).limit(size)
             result = await db.execute(stmt)
             documents = result.scalars().all()
 
@@ -272,14 +264,10 @@ async def delete_document(
     filename = document.filename
 
     # 删除分块（级联删除也会处理，但显式删除更清晰）
-    await db.execute(
-        delete(RagChunk).where(RagChunk.doc_id == doc_id)
-    )
+    await db.execute(delete(RagChunk).where(RagChunk.doc_id == doc_id))
 
     # 删除文档
-    await db.execute(
-        delete(RagDocument).where(RagDocument.doc_id == doc_id)
-    )
+    await db.execute(delete(RagDocument).where(RagDocument.doc_id == doc_id))
 
     logger.info(f"文档已删除: doc_id={doc_id}, filename={filename}")
     return ok(message=f"文档 '{filename}' 已删除")
@@ -345,11 +333,7 @@ async def reprocess_document(
         return fail(message=f"文档不存在: doc_id={doc_id}")
 
     # 获取现有分块内容，重新组装原始文本
-    chunk_stmt = (
-        select(RagChunk)
-        .where(RagChunk.doc_id == doc_id)
-        .order_by(RagChunk.chunk_index)
-    )
+    chunk_stmt = select(RagChunk).where(RagChunk.doc_id == doc_id).order_by(RagChunk.chunk_index)
     chunk_result = await db.execute(chunk_stmt)
     existing_chunks = chunk_result.scalars().all()
 
@@ -360,9 +344,7 @@ async def reprocess_document(
     original_text = "\n\n".join(chunk.content for chunk in existing_chunks)
 
     # 删除现有分块
-    await db.execute(
-        delete(RagChunk).where(RagChunk.doc_id == doc_id)
-    )
+    await db.execute(delete(RagChunk).where(RagChunk.doc_id == doc_id))
 
     # 更新文档状态为 processing
     document.status = "processing"
@@ -372,7 +354,7 @@ async def reprocess_document(
 
     # 重新分块和嵌入
     try:
-        from app.ai.rag.pipeline import clean_text, split_text, generate_embeddings, estimate_token_count
+        from app.ai.rag.pipeline import estimate_token_count, generate_embeddings, split_text
 
         # 分块
         chunks = split_text(

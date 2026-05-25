@@ -33,9 +33,8 @@ Java 对应关系：
 
 import logging
 from datetime import date
-from typing import Optional
 
-from sqlalchemy import func, select, desc
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.attendance import Attendance
@@ -115,10 +114,27 @@ async def query_knowledge(
     if _contains_any(
         normalized,
         [
-            "模型", "model", "ai", "大模型", "llm",
-            "provider", "底层", "技术", "架构", "什么版本",
-            "用的什么", "用什么", "哪个模型", "什么api",
-            "qwen", "通义", "deepseek", "ollama", "openai", "dashscope", "百炼",
+            "模型",
+            "model",
+            "ai",
+            "大模型",
+            "llm",
+            "provider",
+            "底层",
+            "技术",
+            "架构",
+            "什么版本",
+            "用的什么",
+            "用什么",
+            "哪个模型",
+            "什么api",
+            "qwen",
+            "通义",
+            "deepseek",
+            "ollama",
+            "openai",
+            "dashscope",
+            "百炼",
         ],
     ):
         _append_self_meta(context_parts)
@@ -250,9 +266,7 @@ async def _append_role_permission_context(parts: list[str], db: AsyncSession) ->
     parts.append(f"角色与权限数据：当前共有 {role_count} 个角色。角色列表：{role_names}。")
 
 
-async def _append_attendance_context(
-    parts: list[str], user_id: int, db: AsyncSession
-) -> None:
+async def _append_attendance_context(parts: list[str], user_id: int, db: AsyncSession) -> None:
     """查询考勤数据"""
     total = await _count(db, Attendance)
     parts.append(f"考勤数据：当前系统共有 {total} 条考勤记录。")
@@ -260,27 +274,18 @@ async def _append_attendance_context(
     # 查询当前用户关联员工的最近考勤
     emp_id = await _get_emp_id_by_user(db, user_id)
     if emp_id:
-        stmt = (
-            select(Attendance)
-            .where(Attendance.emp_id == emp_id)
-            .order_by(desc(Attendance.attendance_date))
-            .limit(5)
-        )
+        stmt = select(Attendance).where(Attendance.emp_id == emp_id).order_by(desc(Attendance.attendance_date)).limit(5)
         result = await db.execute(stmt)
         records = result.scalars().all()
 
         if records:
-            texts = [
-                f"{r.attendance_date}/{r.status or '未知'}" for r in records
-            ]
+            texts = [f"{r.attendance_date}/{r.status or '未知'}" for r in records]
             parts.append(f"当前用户最近考勤：{'、'.join(texts)}。")
         else:
             parts.append("当前用户最近考勤：暂无记录。")
 
 
-async def _append_leave_context(
-    parts: list[str], user_id: int, db: AsyncSession
-) -> None:
+async def _append_leave_context(parts: list[str], user_id: int, db: AsyncSession) -> None:
     """查询请假数据"""
     total = await _count(db, LeaveRequest)
     parts.append(f"请假数据：当前系统共有 {total} 条请假记录。")
@@ -289,26 +294,19 @@ async def _append_leave_context(
     emp_id = await _get_emp_id_by_user(db, user_id)
     if emp_id:
         stmt = (
-            select(LeaveRequest)
-            .where(LeaveRequest.emp_id == emp_id)
-            .order_by(desc(LeaveRequest.apply_time))
-            .limit(5)
+            select(LeaveRequest).where(LeaveRequest.emp_id == emp_id).order_by(desc(LeaveRequest.apply_time)).limit(5)
         )
         result = await db.execute(stmt)
         records = result.scalars().all()
 
         if records:
-            texts = [
-                f"{r.leave_type or '未知'}/{r.status or '未知'}" for r in records
-            ]
+            texts = [f"{r.leave_type or '未知'}/{r.status or '未知'}" for r in records]
             parts.append(f"当前用户最近请假：{'、'.join(texts)}。")
         else:
             parts.append("当前用户最近请假：暂无记录。")
 
 
-async def _append_salary_context(
-    parts: list[str], user_id: int, db: AsyncSession
-) -> None:
+async def _append_salary_context(parts: list[str], user_id: int, db: AsyncSession) -> None:
     """查询薪资数据"""
     record_count = await _count(db, SalaryRecord)
     config_count = await _count(db, SalaryConfig)
@@ -318,10 +316,7 @@ async def _append_salary_context(
     emp_id = await _get_emp_id_by_user(db, user_id)
     if emp_id:
         stmt = (
-            select(SalaryRecord)
-            .where(SalaryRecord.emp_id == emp_id)
-            .order_by(desc(SalaryRecord.salary_month))
-            .limit(1)
+            select(SalaryRecord).where(SalaryRecord.emp_id == emp_id).order_by(desc(SalaryRecord.salary_month)).limit(1)
         )
         result = await db.execute(stmt)
         latest = result.scalar_one_or_none()
@@ -348,9 +343,7 @@ async def _append_report_context(parts: list[str], db: AsyncSession) -> None:
     # 本月新入职
     today = date.today()
     first_of_month = today.replace(day=1)
-    stmt = select(func.count()).select_from(Employee).where(
-        Employee.hire_date >= first_of_month
-    )
+    stmt = select(func.count()).select_from(Employee).where(Employee.hire_date >= first_of_month)
     result = await db.execute(stmt)
     new_hires = result.scalar() or 0
 
@@ -368,6 +361,7 @@ async def _append_weather_context(parts: list[str], message: str) -> None:
          如果无法识别城市名，默认查询"绵阳"（用户所在城市）。
     """
     import re
+
     from app.services.weather_service import get_weather
 
     # 尝试从消息中提取城市名
@@ -414,10 +408,7 @@ async def _append_weather_context(parts: list[str], message: str) -> None:
             )
     except Exception as e:
         logger.warning(f"天气查询异常: {e}")
-        parts.append(
-            f"天气查询结果：调用失败（{e}）。\n"
-            f"系统已集成高德地图天气 API，但当前网络无法连接外部服务。"
-        )
+        parts.append(f"天气查询结果：调用失败（{e}）。\n" f"系统已集成高德地图天气 API，但当前网络无法连接外部服务。")
 
 
 def _append_self_meta(parts: list[str]) -> None:
@@ -443,12 +434,16 @@ def _append_self_meta(parts: list[str]) -> None:
     )
     primary_status = "已连接（API Key 已配置）" if primary_configured else "未连接（API Key 未配置）"
 
-    fallback_configured = fallback.api_key not in (
-        "your_dashscope_api_key_here",
-        "your_api_key_here",
-        "sk-xxx",
-        "",
-    ) or fallback.provider == "ollama"
+    fallback_configured = (
+        fallback.api_key
+        not in (
+            "your_dashscope_api_key_here",
+            "your_api_key_here",
+            "sk-xxx",
+            "",
+        )
+        or fallback.provider == "ollama"
+    )
     fallback_status = "可用" if fallback_configured else "未配置"
 
     parts.append(
@@ -481,7 +476,7 @@ async def _count(db: AsyncSession, model) -> int:
     return result.scalar() or 0
 
 
-async def _get_dept_name(db: AsyncSession, dept_id: Optional[int]) -> str:
+async def _get_dept_name(db: AsyncSession, dept_id: int | None) -> str:
     """根据部门 ID 获取部门名称"""
     if dept_id is None:
         return "未知部门"
@@ -491,7 +486,7 @@ async def _get_dept_name(db: AsyncSession, dept_id: Optional[int]) -> str:
     return name or "未知部门"
 
 
-async def _get_position_name(db: AsyncSession, position_id: Optional[int]) -> str:
+async def _get_position_name(db: AsyncSession, position_id: int | None) -> str:
     """根据职位 ID 获取职位名称"""
     if position_id is None:
         return "未知岗位"
@@ -501,7 +496,7 @@ async def _get_position_name(db: AsyncSession, position_id: Optional[int]) -> st
     return name or "未知岗位"
 
 
-async def _get_role_name(db: AsyncSession, role_id: Optional[int]) -> str:
+async def _get_role_name(db: AsyncSession, role_id: int | None) -> str:
     """根据角色 ID 获取角色名称"""
     if role_id is None:
         return "未知角色"
@@ -511,7 +506,7 @@ async def _get_role_name(db: AsyncSession, role_id: Optional[int]) -> str:
     return name or "未知角色"
 
 
-async def _get_emp_id_by_user(db: AsyncSession, user_id: int) -> Optional[int]:
+async def _get_emp_id_by_user(db: AsyncSession, user_id: int) -> int | None:
     """根据用户 ID 获取关联的员工 ID"""
     stmt = select(SysUser.emp_id).where(SysUser.user_id == user_id)
     result = await db.execute(stmt)

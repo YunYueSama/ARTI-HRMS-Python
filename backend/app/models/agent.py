@@ -8,7 +8,6 @@ Agent 相关模型（AgentTask、AgentExecutionLog、AgentApprovalRecord）
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -24,29 +23,29 @@ class AgentTask(Base):
     # 任务ID（主键，自增）
     task_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 用户ID
-    user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 用户原始指令文本
-    command_text: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    command_text: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # 识别到的意图
-    intent: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    intent: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 风险等级（low/medium/high）
-    risk_level: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    risk_level: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # 任务状态（planned/approved/executing/completed/failed/cancelled）
-    status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # LLM 提供商名称
-    provider_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    provider_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # 是否需要人工审批
-    requires_approval: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    requires_approval: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     # 是否可执行
-    executable: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    executable: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     # 执行计划 JSON（TEXT 类型）
-    plan_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    plan_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 执行结果摘要
-    result_summary: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    result_summary: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # 更新时间
-    update_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    update_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class AgentExecutionLog(Base):
@@ -57,15 +56,15 @@ class AgentExecutionLog(Base):
     # 日志ID（主键，自增）
     log_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 关联任务ID
-    task_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    task_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 步骤序号
-    step_no: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    step_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 日志级别（INFO/WARN/ERROR）
-    log_level: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    log_level: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # 日志消息内容（TEXT 类型）
-    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class AgentApprovalRecord(Base):
@@ -76,12 +75,12 @@ class AgentApprovalRecord(Base):
     # 审批记录ID（主键，自增）
     approval_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 关联任务ID
-    task_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    task_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 审批人用户ID
-    approver_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    approver_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 审批动作（approve/reject）
-    action: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    action: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # 审批备注
-    remark: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    remark: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

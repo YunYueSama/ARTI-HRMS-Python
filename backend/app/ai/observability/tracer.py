@@ -18,11 +18,11 @@ Langfuse SDK 集成和 Trace 管理（ai/observability/tracer.py）
         result = await llm.invoke(messages)
 """
 
-import time
 import logging
+import time
 from contextlib import asynccontextmanager
-from typing import Any, Optional
 from dataclasses import dataclass, field
+from typing import Any
 
 from app.core.config import settings
 
@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 try:
     from langfuse import Langfuse
     from langfuse.callback import CallbackHandler as LangfuseCallbackHandler
+
     LANGFUSE_AVAILABLE = True
 except ImportError:
     LANGFUSE_AVAILABLE = False
@@ -51,9 +52,10 @@ class TraceContext:
     说明：在 trace() 上下文管理器中 yield 给调用方，
          用于记录额外的 span、事件和元数据。
     """
+
     trace_id: str = ""
     operation_type: str = ""
-    user_id: Optional[int] = None
+    user_id: int | None = None
     start_time: float = 0.0
     metadata: dict = field(default_factory=dict)
     _langfuse_trace: Any = None
@@ -86,11 +88,9 @@ class LangfuseTracer:
              如果是有效密钥则初始化 Langfuse 客户端，
              否则记录警告并禁用远程追踪。
         """
-        self._client: Optional[Any] = None
+        self._client: Any | None = None
         self._enabled: bool = False
-        self._slow_threshold: float = getattr(
-            settings, "SLOW_RESPONSE_THRESHOLD", 10.0
-        )
+        self._slow_threshold: float = getattr(settings, "SLOW_RESPONSE_THRESHOLD", 10.0)
 
         # 检查是否配置了有效的 Langfuse 密钥
         public_key = settings.LANGFUSE_PUBLIC_KEY
@@ -98,10 +98,7 @@ class LangfuseTracer:
         host = settings.LANGFUSE_HOST
 
         if not LANGFUSE_AVAILABLE:
-            logger.warning(
-                "Langfuse SDK 未安装，追踪功能已禁用。"
-                "安装方式: pip install langfuse"
-            )
+            logger.warning("Langfuse SDK 未安装，追踪功能已禁用。" "安装方式: pip install langfuse")
             return
 
         # 检查密钥是否为占位符
@@ -135,7 +132,7 @@ class LangfuseTracer:
     async def trace(
         self,
         operation_type: str,
-        user_id: Optional[int] = None,
+        user_id: int | None = None,
         **metadata: Any,
     ):
         """
@@ -213,14 +210,9 @@ class LangfuseTracer:
                 except Exception as e:
                     logger.warning(f"更新 Langfuse trace 失败: {e}")
 
-            logger.debug(
-                f"Trace 完成: type={operation_type}, "
-                f"duration={duration_ms:.1f}ms, trace_id={trace_id}"
-            )
+            logger.debug(f"Trace 完成: type={operation_type}, " f"duration={duration_ms:.1f}ms, trace_id={trace_id}")
 
-    def get_langchain_callback(
-        self, trace_id: Optional[str] = None
-    ) -> Optional[Any]:
+    def get_langchain_callback(self, trace_id: str | None = None) -> Any | None:
         """
         获取 LangChain 回调处理器
 
@@ -258,7 +250,7 @@ class LangfuseTracer:
         self,
         trace_id: str,
         score: int,
-        user_id: Optional[int] = None,
+        user_id: int | None = None,
     ) -> bool:
         """
         记录用户反馈
@@ -275,10 +267,7 @@ class LangfuseTracer:
             bool: 是否成功记录反馈
         """
         if not self._enabled or not self._client:
-            logger.debug(
-                f"Langfuse 未启用，反馈仅本地记录: "
-                f"trace_id={trace_id}, score={score}"
-            )
+            logger.debug(f"Langfuse 未启用，反馈仅本地记录: " f"trace_id={trace_id}, score={score}")
             return False
 
         try:
@@ -288,10 +277,7 @@ class LangfuseTracer:
                 value=score,
                 comment=f"user_id={user_id}" if user_id else None,
             )
-            logger.info(
-                f"用户反馈已记录: trace_id={trace_id}, "
-                f"score={score}, user_id={user_id}"
-            )
+            logger.info(f"用户反馈已记录: trace_id={trace_id}, " f"score={score}, user_id={user_id}")
             return True
         except Exception as e:
             logger.error(f"记录用户反馈失败: {e}")
@@ -322,13 +308,13 @@ class LangfuseTracer:
             return False
 
         from collections import Counter
+
         state_counts = Counter(state_history)
 
         for state, count in state_counts.items():
             if count > 3:
                 logger.warning(
-                    f"检测到状态死锁: 节点 '{state}' 被访问 {count} 次 "
-                    f"(阈值: 3), 状态历史: {state_history}"
+                    f"检测到状态死锁: 节点 '{state}' 被访问 {count} 次 " f"(阈值: 3), 状态历史: {state_history}"
                 )
                 return True
 

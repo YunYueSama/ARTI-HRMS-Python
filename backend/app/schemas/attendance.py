@@ -5,7 +5,6 @@
 """
 
 from datetime import date, datetime, time
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -15,12 +14,12 @@ class AttendanceCreate(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    emp_id: Optional[int] = Field(default=None, description="员工ID")
-    attendance_date: Optional[date] = Field(default=None, description="考勤日期")
-    clock_in: Optional[str] = Field(default=None, description="签到时间（格式 HH:MM）")
-    clock_out: Optional[str] = Field(default=None, description="签退时间（格式 HH:MM）")
-    status: Optional[str] = Field(default=None, description="考勤状态（正常/迟到/早退/缺勤）")
-    remark: Optional[str] = Field(default=None, description="备注")
+    emp_id: int | None = Field(default=None, description="员工ID")
+    attendance_date: date | None = Field(default=None, description="考勤日期")
+    clock_in: str | None = Field(default=None, description="签到时间（格式 HH:MM）")
+    clock_out: str | None = Field(default=None, description="签退时间（格式 HH:MM）")
+    status: str | None = Field(default=None, description="考勤状态（正常/迟到/早退/缺勤）")
+    remark: str | None = Field(default=None, description="备注")
 
 
 class AttendanceUpdate(BaseModel):
@@ -28,12 +27,12 @@ class AttendanceUpdate(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    emp_id: Optional[int] = Field(default=None, description="员工ID")
-    attendance_date: Optional[date] = Field(default=None, description="考勤日期")
-    clock_in: Optional[str] = Field(default=None, description="签到时间（格式 HH:MM）")
-    clock_out: Optional[str] = Field(default=None, description="签退时间（格式 HH:MM）")
-    status: Optional[str] = Field(default=None, description="考勤状态（正常/迟到/早退/缺勤）")
-    remark: Optional[str] = Field(default=None, description="备注")
+    emp_id: int | None = Field(default=None, description="员工ID")
+    attendance_date: date | None = Field(default=None, description="考勤日期")
+    clock_in: str | None = Field(default=None, description="签到时间（格式 HH:MM）")
+    clock_out: str | None = Field(default=None, description="签退时间（格式 HH:MM）")
+    status: str | None = Field(default=None, description="考勤状态（正常/迟到/早退/缺勤）")
+    remark: str | None = Field(default=None, description="备注")
 
 
 class AttendanceResponse(BaseModel):
@@ -42,13 +41,13 @@ class AttendanceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     attendance_id: int = Field(description="考勤记录ID")
-    emp_id: Optional[int] = Field(default=None, description="员工ID")
-    attendance_date: Optional[date] = Field(default=None, description="考勤日期")
-    clock_in: Optional[time] = Field(default=None, description="签到时间")
-    clock_out: Optional[time] = Field(default=None, description="签退时间")
-    status: Optional[str] = Field(default=None, description="考勤状态")
-    remark: Optional[str] = Field(default=None, description="备注")
-    create_time: Optional[datetime] = Field(default=None, description="创建时间")
+    emp_id: int | None = Field(default=None, description="员工ID")
+    attendance_date: date | None = Field(default=None, description="考勤日期")
+    clock_in: time | None = Field(default=None, description="签到时间")
+    clock_out: time | None = Field(default=None, description="签退时间")
+    status: str | None = Field(default=None, description="考勤状态")
+    remark: str | None = Field(default=None, description="备注")
+    create_time: datetime | None = Field(default=None, description="创建时间")
 
 
 class AttendanceQuery(BaseModel):
@@ -56,7 +55,7 @@ class AttendanceQuery(BaseModel):
 
     page: int = Field(default=1, ge=1, description="页码（从1开始）")
     size: int = Field(default=10, ge=1, le=500, description="每页大小")
-    emp_id: Optional[int] = Field(default=None, description="员工ID筛选")
-    start_date: Optional[date] = Field(default=None, description="开始日期")
-    end_date: Optional[date] = Field(default=None, description="结束日期")
-    status: Optional[str] = Field(default=None, description="考勤状态筛选")
+    emp_id: int | None = Field(default=None, description="员工ID筛选")
+    start_date: date | None = Field(default=None, description="开始日期")
+    end_date: date | None = Field(default=None, description="结束日期")
+    status: str | None = Field(default=None, description="考勤状态筛选")

@@ -21,7 +21,6 @@ Java 对应关系：
 """
 
 import logging
-from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -32,35 +31,108 @@ from app.schemas.agent import MessageCategory
 logger = logging.getLogger(__name__)
 
 # 关键词分类规则（优先级从高到低）
-_EMOTIONAL_KEYWORDS = frozenset([
-    "累", "难过", "烦", "焦虑", "委屈", "崩溃", "不开心", "压力",
-    "想哭", "安慰", "陪我", "郁闷", "心烦", "受不了", "好难",
-])
+_EMOTIONAL_KEYWORDS = frozenset(
+    [
+        "累",
+        "难过",
+        "烦",
+        "焦虑",
+        "委屈",
+        "崩溃",
+        "不开心",
+        "压力",
+        "想哭",
+        "安慰",
+        "陪我",
+        "郁闷",
+        "心烦",
+        "受不了",
+        "好难",
+    ]
+)
 
-_PROCESS_KEYWORDS = frozenset([
-    "如何", "怎么", "流程", "步骤", "入口", "审批", "申请", "操作",
-    "怎样", "方法", "教程", "指南",
-])
+_PROCESS_KEYWORDS = frozenset(
+    [
+        "如何",
+        "怎么",
+        "流程",
+        "步骤",
+        "入口",
+        "审批",
+        "申请",
+        "操作",
+        "怎样",
+        "方法",
+        "教程",
+        "指南",
+    ]
+)
 
-_DATA_KEYWORDS = frozenset([
-    "员工", "人员", "部门", "岗位", "职位", "考勤", "打卡", "签到",
-    "请假", "休假", "工资", "薪资", "薪酬", "报表", "统计",
-    "多少人", "出勤率", "我的", "当前", "查询", "记录",
-    "角色", "权限", "用户", "账号", "天气",
-    # 关于 AI 自身的元问题（亚托莉用的什么模型/底层 LLM 是什么等）
-    "模型", "model", "大模型", "llm", "provider", "底层架构",
-    "技术架构", "什么版本", "用的什么", "用什么", "哪个模型",
-    "qwen", "通义", "deepseek", "ollama", "openai", "dashscope", "百炼",
-])
+_DATA_KEYWORDS = frozenset(
+    [
+        "员工",
+        "人员",
+        "部门",
+        "岗位",
+        "职位",
+        "考勤",
+        "打卡",
+        "签到",
+        "请假",
+        "休假",
+        "工资",
+        "薪资",
+        "薪酬",
+        "报表",
+        "统计",
+        "多少人",
+        "出勤率",
+        "我的",
+        "当前",
+        "查询",
+        "记录",
+        "角色",
+        "权限",
+        "用户",
+        "账号",
+        "天气",
+        # 关于 AI 自身的元问题（亚托莉用的什么模型/底层 LLM 是什么等）
+        "模型",
+        "model",
+        "大模型",
+        "llm",
+        "provider",
+        "底层架构",
+        "技术架构",
+        "什么版本",
+        "用的什么",
+        "用什么",
+        "哪个模型",
+        "qwen",
+        "通义",
+        "deepseek",
+        "ollama",
+        "openai",
+        "dashscope",
+        "百炼",
+    ]
+)
 
-_UNKNOWN_KEYWORDS = frozenset([
-    "未来", "一定会", "能不能保证", "预测", "估计", "会不会",
-])
+_UNKNOWN_KEYWORDS = frozenset(
+    [
+        "未来",
+        "一定会",
+        "能不能保证",
+        "预测",
+        "估计",
+        "会不会",
+    ]
+)
 
 
 async def classify_message(
     message: str,
-    model: Optional[BaseChatModel] = None,
+    model: BaseChatModel | None = None,
 ) -> MessageCategory:
     """
     对用户消息进行分类
@@ -99,7 +171,7 @@ async def classify_message(
     return MessageCategory.DAILY_CHAT
 
 
-def _classify_by_keywords(normalized: str) -> Optional[MessageCategory]:
+def _classify_by_keywords(normalized: str) -> MessageCategory | None:
     """基于关键词规则进行快速分类
 
     优先级说明：
@@ -129,17 +201,19 @@ def _classify_by_keywords(normalized: str) -> Optional[MessageCategory]:
     return None
 
 
-async def _classify_by_llm(message: str, model: BaseChatModel) -> Optional[MessageCategory]:
+async def _classify_by_llm(message: str, model: BaseChatModel) -> MessageCategory | None:
     """使用 LLM 进行消息分类"""
     prompt = get_classification_prompt().format(message=message)
 
-    response = await model.ainvoke([
-        SystemMessage(content="你是一个消息分类器，只返回类别名称，不要返回其他内容。"),
-        HumanMessage(content=prompt),
-    ])
+    response = await model.ainvoke(
+        [
+            SystemMessage(content="你是一个消息分类器，只返回类别名称，不要返回其他内容。"),
+            HumanMessage(content=prompt),
+        ]
+    )
 
     # 解析 LLM 返回的类别名称
-    result_text = response.content.strip().lower().replace(" ", "").replace("-", "_")
+    result_text = str(response.content).strip().lower().replace(" ", "").replace("-", "_")
 
     # 映射到枚举
     category_map = {

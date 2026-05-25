@@ -16,8 +16,9 @@ Java 对应关系：
         return ApiResponse.success(data=employees, message="查询成功")
 """
 
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, Field
-from typing import Generic, TypeVar, Optional, List
 
 # 泛型类型变量，用于响应数据的类型参数化
 T = TypeVar("T")
@@ -40,9 +41,10 @@ class ApiResponse(BaseModel, Generic[T]):
         - message 对应 Java 的 message 字段
         - data 对应 Java 的 data 字段
     """
+
     success: bool = Field(description="请求是否成功")
     message: str = Field(default="ok", description="提示信息")
-    data: Optional[T] = Field(default=None, description="响应数据")
+    data: T | None = Field(default=None, description="响应数据")
 
 
 def ok(data=None, message: str = "ok") -> ApiResponse:
@@ -92,7 +94,8 @@ class PageResponse(BaseModel, Generic[T]):
         - items 对应 Java 的 content 字段
         - total 对应 Java 的 total 字段
     """
-    items: List[T] = Field(description="当前页数据列表")
+
+    items: list[T] = Field(description="当前页数据列表")
     total: int = Field(description="总记录数")
     page: int = Field(ge=1, description="当前页码（从 1 开始）")
     size: int = Field(ge=1, description="每页大小")

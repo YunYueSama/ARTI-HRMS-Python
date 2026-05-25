@@ -16,14 +16,14 @@ leave types, durations and remarks from plain text. The implementations
 are intentionally conservative and dependency-free so they are safe for
 development and tests. Replace or extend with LLM-backed logic later.
 """
+
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import date, timedelta
+from typing import Any
 
 from app.ai.agent.state import AgentState
-
 
 # ----- Simple configuration / keywords -----
 LEAVE_TYPES = [
@@ -36,7 +36,7 @@ LEAVE_TYPES = [
     "丧假",
 ]
 
-INTENT_KEYWORDS: Dict[str, List[str]] = {
+INTENT_KEYWORDS: dict[str, list[str]] = {
     "leave.create": ["请假", "休假", "请两天", "请假申请", "我要请"],
     "attendance.upsert": ["打卡", "签到", "签退", "补卡"],
     "role-permission.update": ["权限", "分配权限", "授权"],
@@ -44,6 +44,7 @@ INTENT_KEYWORDS: Dict[str, List[str]] = {
 
 
 # ----- Small text utilities -----
+
 
 def _contains_any(text: str, *keywords: str) -> bool:
     t = text or ""
@@ -69,11 +70,10 @@ CHINESE_NUMERAL = {
 }
 
 
-def _chinese_number_to_int(s: str) -> Optional[int]:
+def _chinese_number_to_int(s: str) -> int | None:
     # Very small support: 一 二 三 四 五 六 七 八 九 十 两
     if not s:
         return None
-    total = 0
     if s in CHINESE_NUMERAL:
         return CHINESE_NUMERAL[s]
     # handle 二十, 二十五 etc (simple)
@@ -85,7 +85,7 @@ def _chinese_number_to_int(s: str) -> Optional[int]:
     return None
 
 
-def _safe_int(s: str) -> Optional[int]:
+def _safe_int(s: str) -> int | None:
     try:
         return int(s)
     except Exception:
@@ -94,7 +94,8 @@ def _safe_int(s: str) -> Optional[int]:
 
 # ----- Date / time extraction helpers -----
 
-def _extract_dates(text: str) -> List[str]:
+
+def _extract_dates(text: str) -> list[str]:
     """Return list of date strings in ISO format (YYYY-MM-DD).
 
     Supports:
@@ -107,7 +108,7 @@ def _extract_dates(text: str) -> List[str]:
         return []
     text = text.strip()
     today = date.today()
-    results: List[str] = []
+    results: list[str] = []
 
     # explicit YYYY-MM-DD
     for m in re.finditer(r"\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b", text):
@@ -146,7 +147,7 @@ def _extract_dates(text: str) -> List[str]:
 
     # de-duplicate while preserving order
     seen = set()
-    out: List[str] = []
+    out: list[str] = []
     for v in results:
         if v not in seen:
             out.append(v)
@@ -154,10 +155,10 @@ def _extract_dates(text: str) -> List[str]:
     return out
 
 
-def _extract_times(text: str) -> List[str]:
+def _extract_times(text: str) -> list[str]:
     if not text:
         return []
-    out: List[str] = []
+    out: list[str] = []
     # 24h times like 09:30 or 9:30
     for m in re.finditer(r"\b([01]?\d|2[0-3]):([0-5]\d)\b", text):
         out.append(f"{int(m.group(1)):02d}:{m.group(2)}")
@@ -174,7 +175,7 @@ def _extract_times(text: str) -> List[str]:
     return list(dict.fromkeys(out))
 
 
-def _extract_days_from_text(text: str) -> Optional[float]:
+def _extract_days_from_text(text: str) -> float | None:
     if not text:
         return None
     # arabic numbers
@@ -193,7 +194,7 @@ def _extract_days_from_text(text: str) -> Optional[float]:
     return None
 
 
-def _find_leave_type(text: str) -> Optional[str]:
+def _find_leave_type(text: str) -> str | None:
     if not text:
         return None
     for t in LEAVE_TYPES:
@@ -217,7 +218,7 @@ def _extract_remark(text: str) -> str:
 # ----- Node implementations -----
 
 
-async def intent_recognition_node(state: AgentState) -> Dict[str, Any]:
+async def intent_recognition_node(state: AgentState) -> dict[str, Any]:
     """Basic rule-based intent recognizer.
 
     Returns partial state containing at least `intent` (or 'unknown') and
@@ -239,15 +240,15 @@ async def intent_recognition_node(state: AgentState) -> Dict[str, Any]:
     return {"intent": "unknown", "provider_name": "rule"}
 
 
-async def plan_generation_node(state: AgentState) -> Dict[str, Any]:
+async def plan_generation_node(state: AgentState) -> dict[str, Any]:
     """Generate a minimal executable plan from recognized intent.
 
     This function fills `plan`, `executable`, `warnings`, `risk_level`.
     """
     intent = state.get("intent")
     cmd = state.get("command") or ""
-    plan: Dict[str, Any] = {}
-    warnings: List[str] = []
+    plan: dict[str, Any] = {}
+    warnings: list[str] = []
     executable = True
     risk_level = "low"
 
@@ -341,7 +342,7 @@ async def plan_generation_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-async def human_approval_node(state: AgentState) -> Dict[str, Any]:
+async def human_approval_node(state: AgentState) -> dict[str, Any]:
     """Mark a plan as pending approval if required.
 
     Simple behaviour: if `requires_approval` exists and is False, set approved.
@@ -354,13 +355,13 @@ async def human_approval_node(state: AgentState) -> Dict[str, Any]:
     return {"approval_status": "pending", "requires_approval": True}
 
 
-async def execution_node(state: AgentState) -> Dict[str, Any]:
+async def execution_node(state: AgentState) -> dict[str, Any]:
     """Execute the plan with best-effort simulation.
 
     The node appends to `execution_results` and sets `result_summary`.
     """
     plan = state.get("plan") or {}
-    results: List[Dict[str, Any]] = state.get("execution_results") or []
+    results: list[dict[str, Any]] = state.get("execution_results") or []
 
     if plan.get("intent") == "leave.create":
         preview = plan.get("preview", {})
@@ -384,16 +385,18 @@ async def execution_node(state: AgentState) -> Dict[str, Any]:
         }
 
     # fallback: mark as no-op
-    results.append({
-        "step": len(results) + 1,
-        "action": "noop",
-        "status": "skipped",
-        "detail": {"note": "unsupported plan type"},
-    })
+    results.append(
+        {
+            "step": len(results) + 1,
+            "action": "noop",
+            "status": "skipped",
+            "detail": {"note": "unsupported plan type"},
+        }
+    )
     return {"execution_results": results, "result_summary": "未执行任何操作"}
 
 
-async def result_reporting_node(state: AgentState) -> Dict[str, Any]:
+async def result_reporting_node(state: AgentState) -> dict[str, Any]:
     """Compose a user-facing result summary.
 
     Returns or preserves `result_summary` and may add small metadata.
@@ -408,7 +411,7 @@ async def result_reporting_node(state: AgentState) -> Dict[str, Any]:
     return {"result_summary": summary}
 
 
-async def error_reporting_node(state: AgentState) -> Dict[str, Any]:
+async def error_reporting_node(state: AgentState) -> dict[str, Any]:
     """Aggregate and return error messages.
 
     Expects `error_history` in state.

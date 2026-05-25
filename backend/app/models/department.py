@@ -6,7 +6,6 @@
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -22,12 +21,12 @@ class Department(Base):
     # 部门ID（主键，自增）
     dept_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 部门名称
-    dept_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    dept_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # 部门描述
-    dept_desc: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    dept_desc: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # 上级部门ID（支持树形结构）
-    parent_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    parent_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # 更新时间
-    update_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    update_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

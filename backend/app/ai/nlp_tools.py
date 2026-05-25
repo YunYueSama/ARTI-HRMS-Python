@@ -18,11 +18,9 @@ NLP 服务工具（ai/nlp_tools.py）
 import logging
 import re
 from collections import Counter
-from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.nlp import EntityItem, KeywordItem, SentimentResult
 
@@ -33,57 +31,214 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 # HR 常见部门名称
-_DEPARTMENT_KEYWORDS = frozenset([
-    "人力资源部", "技术部", "财务部", "市场部", "销售部",
-    "行政部", "研发部", "产品部", "运营部", "法务部",
-    "客服部", "采购部", "质量部", "生产部", "信息部",
-    "人力资源", "技术", "财务", "市场", "销售",
-    "研发", "产品", "运营", "法务", "客服",
-])
+_DEPARTMENT_KEYWORDS = frozenset(
+    [
+        "人力资源部",
+        "技术部",
+        "财务部",
+        "市场部",
+        "销售部",
+        "行政部",
+        "研发部",
+        "产品部",
+        "运营部",
+        "法务部",
+        "客服部",
+        "采购部",
+        "质量部",
+        "生产部",
+        "信息部",
+        "人力资源",
+        "技术",
+        "财务",
+        "市场",
+        "销售",
+        "研发",
+        "产品",
+        "运营",
+        "法务",
+        "客服",
+    ]
+)
 
 # HR 常见职位名称
-_POSITION_KEYWORDS = frozenset([
-    "总经理", "总监", "经理", "主管", "专员", "助理",
-    "工程师", "设计师", "分析师", "顾问", "实习生",
-    "副总", "部长", "科长", "组长", "主任",
-    "前端", "后端", "全栈", "测试", "运维",
-])
+_POSITION_KEYWORDS = frozenset(
+    [
+        "总经理",
+        "总监",
+        "经理",
+        "主管",
+        "专员",
+        "助理",
+        "工程师",
+        "设计师",
+        "分析师",
+        "顾问",
+        "实习生",
+        "副总",
+        "部长",
+        "科长",
+        "组长",
+        "主任",
+        "前端",
+        "后端",
+        "全栈",
+        "测试",
+        "运维",
+    ]
+)
 
 # HR 常见请假类型
-_LEAVE_KEYWORDS = frozenset([
-    "年假", "病假", "事假", "婚假", "产假", "陪产假", "丧假",
-    "调休", "加班", "出差", "外勤",
-])
+_LEAVE_KEYWORDS = frozenset(
+    [
+        "年假",
+        "病假",
+        "事假",
+        "婚假",
+        "产假",
+        "陪产假",
+        "丧假",
+        "调休",
+        "加班",
+        "出差",
+        "外勤",
+    ]
+)
 
 # 考勤相关关键词
-_ATTENDANCE_KEYWORDS = frozenset([
-    "签到", "签退", "打卡", "迟到", "早退", "缺勤", "加班",
-    "出勤", "旷工", "请假",
-])
+_ATTENDANCE_KEYWORDS = frozenset(
+    [
+        "签到",
+        "签退",
+        "打卡",
+        "迟到",
+        "早退",
+        "缺勤",
+        "加班",
+        "出勤",
+        "旷工",
+        "请假",
+    ]
+)
 
 # 积极情感词
-_POSITIVE_WORDS = frozenset([
-    "好", "优秀", "出色", "满意", "开心", "高兴", "感谢", "谢谢",
-    "不错", "很好", "太棒", "完美", "优秀", "赞", "支持",
-    "喜欢", "快乐", "幸福", "顺利", "成功", "升职", "加薪",
-])
+_POSITIVE_WORDS = frozenset(
+    [
+        "好",
+        "优秀",
+        "出色",
+        "满意",
+        "开心",
+        "高兴",
+        "感谢",
+        "谢谢",
+        "不错",
+        "很好",
+        "太棒",
+        "完美",
+        "优秀",
+        "赞",
+        "支持",
+        "喜欢",
+        "快乐",
+        "幸福",
+        "顺利",
+        "成功",
+        "升职",
+        "加薪",
+    ]
+)
 
 # 消极情感词
-_NEGATIVE_WORDS = frozenset([
-    "差", "糟糕", "不满", "失望", "难过", "生气", "愤怒", "投诉",
-    "不好", "太差", "垃圾", "差劲", "恶心", "讨厌", "反对",
-    "累", "压力", "焦虑", "委屈", "崩溃", "烦", "郁闷",
-])
+_NEGATIVE_WORDS = frozenset(
+    [
+        "差",
+        "糟糕",
+        "不满",
+        "失望",
+        "难过",
+        "生气",
+        "愤怒",
+        "投诉",
+        "不好",
+        "太差",
+        "垃圾",
+        "差劲",
+        "恶心",
+        "讨厌",
+        "反对",
+        "累",
+        "压力",
+        "焦虑",
+        "委屈",
+        "崩溃",
+        "烦",
+        "郁闷",
+    ]
+)
 
 # 停用词（中文常见）
-_STOP_WORDS = frozenset([
-    "的", "了", "在", "是", "我", "有", "和", "就", "不", "人",
-    "都", "一", "一个", "上", "也", "很", "到", "说", "要", "去",
-    "你", "会", "着", "没有", "看", "好", "自己", "这", "他", "她",
-    "它", "们", "那", "些", "什么", "怎么", "这个", "那个", "可以",
-    "因为", "所以", "但是", "如果", "虽然", "然后", "已经", "把",
-    "被", "让", "给", "从", "向", "对", "为", "以", "与", "及",
-])
+_STOP_WORDS = frozenset(
+    [
+        "的",
+        "了",
+        "在",
+        "是",
+        "我",
+        "有",
+        "和",
+        "就",
+        "不",
+        "人",
+        "都",
+        "一",
+        "一个",
+        "上",
+        "也",
+        "很",
+        "到",
+        "说",
+        "要",
+        "去",
+        "你",
+        "会",
+        "着",
+        "没有",
+        "看",
+        "好",
+        "自己",
+        "这",
+        "他",
+        "她",
+        "它",
+        "们",
+        "那",
+        "些",
+        "什么",
+        "怎么",
+        "这个",
+        "那个",
+        "可以",
+        "因为",
+        "所以",
+        "但是",
+        "如果",
+        "虽然",
+        "然后",
+        "已经",
+        "把",
+        "被",
+        "让",
+        "给",
+        "从",
+        "向",
+        "对",
+        "为",
+        "以",
+        "与",
+        "及",
+    ]
+)
 
 
 class NLPService:
@@ -98,7 +253,7 @@ class NLPService:
         result = await service.analyze_text("张三申请了3天年假", tasks=["ner", "sentiment"])
     """
 
-    def __init__(self, model: Optional[BaseChatModel] = None):
+    def __init__(self, model: BaseChatModel | None = None):
         """
         初始化 NLP 服务
 
@@ -203,8 +358,7 @@ class NLPService:
 
         # 计算权重并排序
         keywords = [
-            KeywordItem(word=word, weight=round(count / max_freq, 4))
-            for word, count in word_counts.most_common(top_k)
+            KeywordItem(word=word, weight=round(count / max_freq, 4)) for word, count in word_counts.most_common(top_k)
         ]
 
         return keywords, total_words
@@ -250,20 +404,24 @@ class NLPService:
         entities = []
         # 匹配 yyyy-MM-dd 或 yyyy/MM/dd 格式
         for match in re.finditer(r"\d{4}[-/]\d{1,2}[-/]\d{1,2}", text):
-            entities.append(EntityItem(
-                text=match.group(),
-                label="DATE",
-                start=match.start(),
-                end=match.end(),
-            ))
+            entities.append(
+                EntityItem(
+                    text=match.group(),
+                    label="DATE",
+                    start=match.start(),
+                    end=match.end(),
+                )
+            )
         # 匹配 X天/X个工作日
         for match in re.finditer(r"\d+\s*(天|个工作日|小时)", text):
-            entities.append(EntityItem(
-                text=match.group(),
-                label="DURATION",
-                start=match.start(),
-                end=match.end(),
-            ))
+            entities.append(
+                EntityItem(
+                    text=match.group(),
+                    label="DURATION",
+                    start=match.start(),
+                    end=match.end(),
+                )
+            )
         return entities
 
     def _extract_numbers(self, text: str) -> list[EntityItem]:
@@ -273,12 +431,14 @@ class NLPService:
         for match in re.finditer(r"[¥￥]?\d+(?:\.\d+)?元?", text):
             matched = match.group()
             if re.search(r"[¥￥元]", matched) or len(matched) >= 4:
-                entities.append(EntityItem(
-                    text=matched,
-                    label="MONEY",
-                    start=match.start(),
-                    end=match.end(),
-                ))
+                entities.append(
+                    EntityItem(
+                        text=matched,
+                        label="MONEY",
+                        start=match.start(),
+                        end=match.end(),
+                    )
+                )
         return entities
 
     def _extract_hr_keywords(self, text: str) -> list[EntityItem]:
@@ -291,12 +451,14 @@ class NLPService:
                 idx = text.find(dept, start)
                 if idx == -1:
                     break
-                entities.append(EntityItem(
-                    text=dept,
-                    label="DEPARTMENT",
-                    start=idx,
-                    end=idx + len(dept),
-                ))
+                entities.append(
+                    EntityItem(
+                        text=dept,
+                        label="DEPARTMENT",
+                        start=idx,
+                        end=idx + len(dept),
+                    )
+                )
                 start = idx + 1
 
         for pos in _POSITION_KEYWORDS:
@@ -305,12 +467,14 @@ class NLPService:
                 idx = text.find(pos, start)
                 if idx == -1:
                     break
-                entities.append(EntityItem(
-                    text=pos,
-                    label="POSITION",
-                    start=idx,
-                    end=idx + len(pos),
-                ))
+                entities.append(
+                    EntityItem(
+                        text=pos,
+                        label="POSITION",
+                        start=idx,
+                        end=idx + len(pos),
+                    )
+                )
                 start = idx + 1
 
         for leave in _LEAVE_KEYWORDS:
@@ -319,12 +483,14 @@ class NLPService:
                 idx = text.find(leave, start)
                 if idx == -1:
                     break
-                entities.append(EntityItem(
-                    text=leave,
-                    label="LEAVE_TYPE",
-                    start=idx,
-                    end=idx + len(leave),
-                ))
+                entities.append(
+                    EntityItem(
+                        text=leave,
+                        label="LEAVE_TYPE",
+                        start=idx,
+                        end=idx + len(leave),
+                    )
+                )
                 start = idx + 1
 
         for att in _ATTENDANCE_KEYWORDS:
@@ -333,17 +499,19 @@ class NLPService:
                 idx = text.find(att, start)
                 if idx == -1:
                     break
-                entities.append(EntityItem(
-                    text=att,
-                    label="ATTENDANCE",
-                    start=idx,
-                    end=idx + len(att),
-                ))
+                entities.append(
+                    EntityItem(
+                        text=att,
+                        label="ATTENDANCE",
+                        start=idx,
+                        end=idx + len(att),
+                    )
+                )
                 start = idx + 1
 
         return entities
 
-    def _analyze_sentiment_by_keywords(self, text: str) -> Optional[SentimentResult]:
+    def _analyze_sentiment_by_keywords(self, text: str) -> SentimentResult | None:
         """基于关键词的情感分析"""
         positive_count = sum(1 for w in _POSITIVE_WORDS if w in text)
         negative_count = sum(1 for w in _NEGATIVE_WORDS if w in text)
@@ -377,7 +545,7 @@ class NLPService:
             if re.match(r"^[一-鿿]+$", token) and len(token) > 2:
                 # 中文长词按 2-gram 切分
                 for i in range(len(token) - 1):
-                    result.append(token[i:i + 2])
+                    result.append(token[i : i + 2])
             else:
                 result.append(token)
         return result
@@ -399,6 +567,7 @@ class NLPService:
 
     async def _extract_entities_by_llm(self, text: str) -> list[EntityItem]:
         """使用 LLM 进行命名实体识别"""
+        assert self._model is not None
         prompt = (
             "请从以下 HR 相关文本中识别命名实体，返回 JSON 数组格式。\n"
             "每个实体包含 text（实体文本）、label（类型标签）。\n"
@@ -407,14 +576,17 @@ class NLPService:
             "只返回 JSON 数组，不要返回其他内容。"
         )
 
-        response = await self._model.ainvoke([
-            SystemMessage(content="你是 HR 领域的命名实体识别工具，只返回 JSON 格式结果。"),
-            HumanMessage(content=prompt),
-        ])
+        response = await self._model.ainvoke(
+            [
+                SystemMessage(content="你是 HR 领域的命名实体识别工具，只返回 JSON 格式结果。"),
+                HumanMessage(content=prompt),
+            ]
+        )
 
-        content = response.content.strip()
+        content = str(response.content).strip()
         # 解析 JSON
         import json
+
         try:
             items = json.loads(content)
             if isinstance(items, list):
@@ -435,20 +607,24 @@ class NLPService:
 
     async def _analyze_sentiment_by_llm(self, text: str) -> SentimentResult:
         """使用 LLM 进行情感分析"""
+        assert self._model is not None
         prompt = (
             "请分析以下 HR 相关文本的情感倾向。\n"
             "返回格式：label（positive/neutral/negative）和 score（0-1 置信度）。\n\n"
             f"文本：{text}\n\n"
-            "只返回 JSON 对象，如：{\"label\": \"positive\", \"score\": 0.85}"
+            '只返回 JSON 对象，如：{"label": "positive", "score": 0.85}'
         )
 
-        response = await self._model.ainvoke([
-            SystemMessage(content="你是情感分析工具，只返回 JSON 格式结果。"),
-            HumanMessage(content=prompt),
-        ])
+        response = await self._model.ainvoke(
+            [
+                SystemMessage(content="你是情感分析工具，只返回 JSON 格式结果。"),
+                HumanMessage(content=prompt),
+            ]
+        )
 
-        content = response.content.strip()
+        content = str(response.content).strip()
         import json
+
         try:
             data = json.loads(content)
             return SentimentResult(

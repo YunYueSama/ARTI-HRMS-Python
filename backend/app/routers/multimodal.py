@@ -29,13 +29,13 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.chat.service import ChatService
 from app.ai.multimodal.stt import transcribe_audio
 from app.ai.multimodal.tts import text_to_speech
 from app.ai.multimodal.vision import analyze_image
-from app.ai.chat.service import ChatService
 from app.core.database import get_mysql_session
-from app.core.dependencies import get_current_user, TokenPayload
-from app.schemas.common import ApiResponse, ok, fail
+from app.core.dependencies import TokenPayload, get_current_user
+from app.schemas.common import ApiResponse, fail, ok
 
 logger = logging.getLogger(__name__)
 
@@ -77,16 +77,12 @@ async def speech_to_text(
     suffix = Path(file.filename).suffix.lower()
     allowed_formats = {".wav", ".mp3", ".webm", ".m4a", ".ogg", ".flac"}
     if suffix not in allowed_formats:
-        return fail(
-            message=f"不支持的音频格式: {suffix}，支持: {', '.join(allowed_formats)}"
-        )
+        return fail(message=f"不支持的音频格式: {suffix}，支持: {', '.join(allowed_formats)}")
 
     # 保存临时文件
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(
-            suffix=suffix, delete=False, prefix="hrms_stt_"
-        ) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False, prefix="hrms_stt_") as tmp:
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
@@ -130,7 +126,7 @@ async def text_to_speech_endpoint(
     """
     if not text or not text.strip():
         return Response(
-            content='{"success":false,"message":"文本内容不能为空"}'.encode("utf-8"),
+            content='{"success":false,"message":"文本内容不能为空"}'.encode(),
             media_type="application/json",
             status_code=400,
         )
@@ -147,13 +143,13 @@ async def text_to_speech_endpoint(
         )
     except ValueError as e:
         return Response(
-            content=f'{{"success":false,"message":"{e}"}}'.encode("utf-8"),
+            content=f'{{"success":false,"message":"{e}"}}'.encode(),
             media_type="application/json",
             status_code=400,
         )
     except RuntimeError as e:
         return Response(
-            content=f'{{"success":false,"message":"{e}"}}'.encode("utf-8"),
+            content=f'{{"success":false,"message":"{e}"}}'.encode(),
             media_type="application/json",
             status_code=500,
         )
@@ -192,16 +188,12 @@ async def vision_analyze(
     suffix = Path(file.filename).suffix.lower()
     allowed_formats = {".jpg", ".jpeg", ".png", ".webp"}
     if suffix not in allowed_formats:
-        return fail(
-            message=f"不支持的图像格式: {suffix}，支持: {', '.join(allowed_formats)}"
-        )
+        return fail(message=f"不支持的图像格式: {suffix}，支持: {', '.join(allowed_formats)}")
 
     # 保存临时文件
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(
-            suffix=suffix, delete=False, prefix="hrms_vision_"
-        ) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False, prefix="hrms_vision_") as tmp:
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
@@ -267,16 +259,12 @@ async def voice_chat(
     suffix = Path(file.filename).suffix.lower()
     allowed_formats = {".wav", ".mp3", ".webm", ".m4a", ".ogg", ".flac"}
     if suffix not in allowed_formats:
-        return fail(
-            message=f"不支持的音频格式: {suffix}，支持: {', '.join(allowed_formats)}"
-        )
+        return fail(message=f"不支持的音频格式: {suffix}，支持: {', '.join(allowed_formats)}")
 
     tmp_path = None
     try:
         # Step 1: 保存临时音频文件
-        with tempfile.NamedTemporaryFile(
-            suffix=suffix, delete=False, prefix="hrms_voice_"
-        ) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False, prefix="hrms_voice_") as tmp:
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
@@ -307,7 +295,7 @@ async def voice_chat(
         # Step 4: 文字转语音（TTS）
         audio_base64 = None
         try:
-            audio_bytes = await text_to_speech(ai_text)
+            audio_bytes = await text_to_speech(ai_text.get("reply", "") if isinstance(ai_text, dict) else str(ai_text))
             audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
         except (RuntimeError, ValueError) as e:
             logger.warning(f"TTS 合成失败，仅返回文本: {e}")

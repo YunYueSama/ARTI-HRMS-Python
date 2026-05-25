@@ -23,14 +23,13 @@ JWT 工作流程：
     is_valid = verify_password("123456", hashed_password)
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
-
 
 # ============================================================
 # 密码哈希上下文
@@ -64,15 +63,17 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
 
     # 计算过期时间
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
+        expire = datetime.now(UTC) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
 
     # 添加标准 JWT 声明
-    to_encode.update({
-        "exp": expire,  # 过期时间（Expiration Time）
-        "iat": datetime.now(timezone.utc),  # 签发时间（Issued At）
-    })
+    to_encode.update(
+        {
+            "exp": expire,  # 过期时间（Expiration Time）
+            "iat": datetime.now(UTC),  # 签发时间（Issued At）
+        }
+    )
 
     # 使用密钥和算法签名生成 Token
     encoded_jwt = jwt.encode(
@@ -80,7 +81,7 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
         settings.JWT_SECRET_KEY,
         algorithm=settings.JWT_ALGORITHM,
     )
-    return encoded_jwt
+    return str(encoded_jwt)
 
 
 def decode_access_token(token: str) -> dict[str, Any] | None:
@@ -105,7 +106,7 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
         )
-        return payload
+        return dict(payload)
     except JWTError:
         # Token 无效（签名错误、已过期、格式错误等）
         return None
@@ -126,7 +127,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         BCrypt 验证过程：从哈希值中提取盐值 → 用相同盐值哈希明文 → 比较结果
         时间复杂度固定，防止计时攻击（Timing Attack）
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return bool(pwd_context.verify(plain_password, hashed_password))
 
 
 def hash_password(password: str) -> str:
@@ -143,4 +144,4 @@ def hash_password(password: str) -> str:
         每次调用生成不同的哈希值（因为盐值随机），这是正常行为。
         哈希结果包含算法标识、轮数和盐值，验证时自动提取。
     """
-    return pwd_context.hash(password)
+    return str(pwd_context.hash(password))

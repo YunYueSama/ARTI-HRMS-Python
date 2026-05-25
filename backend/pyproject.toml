@@ -85,7 +85,7 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP"]
-ignore = ["E501"]  # 行长度由 line-length 控制
+ignore = ["E501", "N818"]  # 行长度由 line-length 控制; N818 允许 Exception 以 Exception 结尾命名
 
 [tool.ruff.format]
 quote-style = "double"

@@ -23,12 +23,8 @@ Java 对应关系：
     AgentTaskService.executeRolePermission() → update_role_permission
 """
 
-from datetime import date
-from typing import Optional
-
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
-
 
 # ============================================================
 # 工具参数模型（Pydantic Schema）
@@ -44,9 +40,7 @@ class LeaveCreateArgs(BaseModel):
     """
 
     emp_id: int = Field(description="员工ID")
-    leave_type: str = Field(
-        description="请假类型（年假/病假/事假/婚假/产假/陪产假/丧假）"
-    )
+    leave_type: str = Field(description="请假类型（年假/病假/事假/婚假/产假/陪产假/丧假）")
     start_date: str = Field(description="开始日期，格式 yyyy-MM-dd")
     end_date: str = Field(description="结束日期，格式 yyyy-MM-dd")
     days: int = Field(description="请假天数")
@@ -63,8 +57,8 @@ class AttendanceUpsertArgs(BaseModel):
 
     emp_id: int = Field(description="员工ID")
     attendance_date: str = Field(description="考勤日期，格式 yyyy-MM-dd")
-    clock_in: Optional[str] = Field(default=None, description="签到时间，格式 HH:mm")
-    clock_out: Optional[str] = Field(default=None, description="签退时间，格式 HH:mm")
+    clock_in: str | None = Field(default=None, description="签到时间，格式 HH:mm")
+    clock_out: str | None = Field(default=None, description="签退时间，格式 HH:mm")
     remark: str = Field(default="", description="备注说明")
 
 
@@ -104,8 +98,8 @@ async def create_leave_request(
 async def upsert_attendance(
     emp_id: int,
     attendance_date: str,
-    clock_in: Optional[str] = None,
-    clock_out: Optional[str] = None,
+    clock_in: str | None = None,
+    clock_out: str | None = None,
     remark: str = "",
 ) -> str:
     """创建或更新考勤记录。如果指定日期已有考勤记录则更新，否则创建新记录。"""

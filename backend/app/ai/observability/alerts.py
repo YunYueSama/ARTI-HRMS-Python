@@ -19,7 +19,6 @@
 
 import logging
 from collections import Counter
-from typing import Optional
 
 from app.core.config import settings
 
@@ -28,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def is_slow_response(
     latency_seconds: float,
-    threshold: float = None,
+    threshold: float | None = None,
 ) -> bool:
     """
     检测是否为慢响应
@@ -61,7 +60,7 @@ def is_slow_response(
 def is_logic_deadlock(
     state_history: list[str],
     max_visits: int = 3,
-) -> tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """
     检测 Agent 状态机逻辑死锁
 
@@ -165,8 +164,6 @@ def detect_anomalies(trace_data: dict) -> list[str]:
         anomalies.append("empty_response")
 
     if anomalies:
-        logger.info(
-            f"异常检测结果: 发现 {len(anomalies)} 个异常 - {anomalies}"
-        )
+        logger.info(f"异常检测结果: 发现 {len(anomalies)} 个异常 - {anomalies}")
 
     return anomalies

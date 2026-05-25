@@ -39,8 +39,12 @@ async def list_attendance(
 ) -> ApiResponse[PageResponse[AttendanceResponse]]:
     """分页查询考勤记录，支持员工、状态和日期范围筛选"""
     query = AttendanceQuery(
-        page=page, size=size, emp_id=emp_id, status=status,
-        start_date=start_date, end_date=end_date,
+        page=page,
+        size=size,
+        emp_id=emp_id,
+        status=status,
+        start_date=start_date,
+        end_date=end_date,
     )
     result = await attendance_service.list_attendance(query, db)
     return ok(data=result)

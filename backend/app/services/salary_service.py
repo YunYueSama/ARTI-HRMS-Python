@@ -23,7 +23,6 @@ from app.schemas.salary import (
     SalaryRecordUpdate,
 )
 
-
 # ============================================================
 # 薪资配置 CRUD
 # ============================================================
@@ -93,9 +92,7 @@ async def create_salary_config(data: SalaryConfigCreate, db: AsyncSession) -> Sa
     return SalaryConfigResponse.model_validate(config)
 
 
-async def update_salary_config(
-    config_id: int, data: SalaryConfigUpdate, db: AsyncSession
-) -> SalaryConfigResponse:
+async def update_salary_config(config_id: int, data: SalaryConfigUpdate, db: AsyncSession) -> SalaryConfigResponse:
     """更新薪资配置（部分更新）"""
     result = await db.execute(select(SalaryConfig).where(SalaryConfig.config_id == config_id))
     config = result.scalar_one_or_none()
@@ -193,9 +190,7 @@ async def create_salary_record(data: SalaryRecordCreate, db: AsyncSession) -> Sa
     return SalaryRecordResponse.model_validate(record)
 
 
-async def update_salary_record(
-    salary_id: int, data: SalaryRecordUpdate, db: AsyncSession
-) -> SalaryRecordResponse:
+async def update_salary_record(salary_id: int, data: SalaryRecordUpdate, db: AsyncSession) -> SalaryRecordResponse:
     """更新薪资记录（部分更新）"""
     result = await db.execute(select(SalaryRecord).where(SalaryRecord.salary_id == salary_id))
     record = result.scalar_one_or_none()

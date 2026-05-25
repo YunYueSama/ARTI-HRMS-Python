@@ -4,8 +4,6 @@ NLP 相关 Schema（schemas/nlp.py）
 说明：定义 NLP 模块的请求/响应模型，包括文本分析、实体提取、情感分析等。
 """
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -47,7 +45,7 @@ class TextAnalyzeResponse(BaseModel):
 
     original_text: str = Field(description="原始文本")
     entities: list[EntityItem] = Field(default_factory=list, description="命名实体列表")
-    sentiment: Optional[SentimentResult] = Field(default=None, description="情感分析结果")
+    sentiment: SentimentResult | None = Field(default=None, description="情感分析结果")
     keywords: list[KeywordItem] = Field(default_factory=list, description="关键词列表")
 
 

@@ -15,7 +15,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_mysql_session
@@ -127,6 +127,7 @@ async def update_user(
     update_data = data.model_dump(exclude_unset=True)
     if "password" in update_data and update_data["password"]:
         from app.core.security import hash_password
+
         update_data["password"] = hash_password(update_data["password"])
     elif "password" in update_data:
         del update_data["password"]

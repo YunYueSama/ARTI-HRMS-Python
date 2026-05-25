@@ -20,14 +20,13 @@ Java 对应关系：
 """
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
-from app.core.config import settings, get_runtime_overrides, update_runtime_overrides
-from app.core.dependencies import get_current_user, require_permission, TokenPayload
-from app.schemas.common import ApiResponse, ok, fail
+from app.core.config import get_runtime_overrides, settings, update_runtime_overrides
+from app.core.dependencies import TokenPayload, get_current_user
+from app.schemas.common import ApiResponse, fail, ok
 
 logger = logging.getLogger(__name__)
 
@@ -44,16 +43,10 @@ def _get_effective_config() -> dict:
     rc = get_runtime_overrides()
     return {
         "model_name": rc.get("model_name", settings.LLM_PRIMARY_MODEL),
-        "context_window_size": rc.get(
-            "context_window_size", settings.TOKEN_CONTEXT_WINDOW
-        ),
-        "temperature": rc.get(
-            "temperature", settings.LLM_PRIMARY_TEMPERATURE
-        ),
+        "context_window_size": rc.get("context_window_size", settings.TOKEN_CONTEXT_WINDOW),
+        "temperature": rc.get("temperature", settings.LLM_PRIMARY_TEMPERATURE),
         "top_p": rc.get("top_p", 0.9),
-        "max_output_tokens": rc.get(
-            "max_output_tokens", settings.LLM_PRIMARY_MAX_TOKENS
-        ),
+        "max_output_tokens": rc.get("max_output_tokens", settings.LLM_PRIMARY_MAX_TOKENS),
         "provider": rc.get("provider", settings.LLM_PRIMARY_PROVIDER),
         "base_url": rc.get("base_url", settings.LLM_PRIMARY_BASE_URL),
         "api_key": rc.get("api_key", ""),
@@ -89,22 +82,14 @@ class ModelConfigUpdateRequest(BaseModel):
          - max_output_tokens: 1 ~ 32768
     """
 
-    model_name: Optional[str] = Field(default=None, description="模型名称")
-    context_window_size: Optional[int] = Field(
-        default=None, ge=1024, le=131072, description="上下文窗口大小"
-    )
-    temperature: Optional[float] = Field(
-        default=None, ge=0.0, le=2.0, description="生成温度（0-2）"
-    )
-    top_p: Optional[float] = Field(
-        default=None, ge=0.0, le=1.0, description="Top-P 采样参数（0-1）"
-    )
-    max_output_tokens: Optional[int] = Field(
-        default=None, ge=1, le=32768, description="最大输出 Token 数"
-    )
-    provider: Optional[str] = Field(default=None, description="LLM 提供商")
-    base_url: Optional[str] = Field(default=None, description="API 基础 URL")
-    api_key: Optional[str] = Field(default=None, description="API 密钥")
+    model_name: str | None = Field(default=None, description="模型名称")
+    context_window_size: int | None = Field(default=None, ge=1024, le=131072, description="上下文窗口大小")
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0, description="生成温度（0-2）")
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0, description="Top-P 采样参数（0-1）")
+    max_output_tokens: int | None = Field(default=None, ge=1, le=32768, description="最大输出 Token 数")
+    provider: str | None = Field(default=None, description="LLM 提供商")
+    base_url: str | None = Field(default=None, description="API 基础 URL")
+    api_key: str | None = Field(default=None, description="API 密钥")
 
 
 # ============================================================

@@ -10,7 +10,6 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 from sqlalchemy import DateTime, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -26,25 +25,25 @@ class ApprovalRule(Base):
     # 规则ID（主键，自增）
     rule_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 审批类型编码（关联 approval_rule_type）
-    type_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    type_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 申请人身份标签
-    applicant_tag: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    applicant_tag: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 天数比较运算符（<=、>、== 等）
-    days_op: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    days_op: Mapped[str | None] = mapped_column(String(10), nullable=True)
     # 天数阈值（BigDecimal → Numeric）
-    days_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    days_value: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     # 第一级审批人身份标签
-    first_approver_tag: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    first_approver_tag: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 第二级审批人身份标签
-    second_approver_tag: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    second_approver_tag: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 第二级审批人数据范围
-    second_approver_scope: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    second_approver_scope: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 排序序号
-    sort_order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    sort_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # 更新时间
-    update_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    update_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ApprovalRuleType(Base):
@@ -55,15 +54,15 @@ class ApprovalRuleType(Base):
     # 类型编码（主键，字符串类型）
     type_code: Mapped[str] = mapped_column(String(50), primary_key=True)
     # 类型名称
-    type_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    type_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # 类型描述
-    type_desc: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    type_desc: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # 状态（active/disabled）
-    status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # 更新时间
-    update_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    update_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class DeptPermissionTemplate(Base):
@@ -74,8 +73,8 @@ class DeptPermissionTemplate(Base):
     # 模板记录ID（主键，自增）
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 部门ID
-    dept_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    dept_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 模块编码
-    module_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    module_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

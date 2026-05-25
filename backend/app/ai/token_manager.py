@@ -33,7 +33,7 @@ Java 对应关系：
 """
 
 import logging
-from typing import Optional
+from typing import Any
 
 from app.ai.observability.token_counter import count_tokens
 from app.core.config import settings
@@ -61,9 +61,9 @@ class TokenManager:
 
     def __init__(
         self,
-        context_window: Optional[int] = None,
-        warning_threshold: Optional[float] = None,
-        max_input_tokens: Optional[int] = None,
+        context_window: int | None = None,
+        warning_threshold: float | None = None,
+        max_input_tokens: int | None = None,
     ):
         """
         初始化 Token 管理器
@@ -94,9 +94,7 @@ class TokenManager:
             return 0
         return count_tokens(text, model=settings.LLM_PRIMARY_MODEL)
 
-    def check_message_limit(
-        self, text: str, max_tokens: int = 4096
-    ) -> tuple[bool, int]:
+    def check_message_limit(self, text: str, max_tokens: int = 4096) -> tuple[bool, int]:
         """
         检查消息是否超出 Token 限制
 
@@ -158,22 +156,17 @@ class TokenManager:
         conversation_messages = [m for m in messages if m.get("role") != "system"]
 
         # 计算系统消息占用的 Token 数
-        system_tokens = sum(
-            self.count_message_tokens(m.get("content", ""))
-            for m in system_messages
-        )
+        system_tokens = sum(self.count_message_tokens(m.get("content", "")) for m in system_messages)
 
         # 剩余预算分配给对话历史
         remaining_budget = budget - system_tokens
         if remaining_budget <= 0:
             # 预算不足以容纳系统消息，仅返回系统消息
-            logger.warning(
-                f"Token 预算不足: system_tokens={system_tokens}, budget={budget}"
-            )
+            logger.warning(f"Token 预算不足: system_tokens={system_tokens}, budget={budget}")
             return system_messages
 
         # 从最新消息开始向前累加，保留尽可能多的最近消息
-        kept_messages = []
+        kept_messages: list[dict[str, Any]] = []
         accumulated_tokens = 0
 
         for msg in reversed(conversation_messages):
@@ -196,9 +189,7 @@ class TokenManager:
 
         return result
 
-    def allocate_budget(
-        self, context_window: Optional[int] = None, threshold: float = 0.8
-    ) -> dict:
+    def allocate_budget(self, context_window: int | None = None, threshold: float = 0.8) -> dict:
         """
         上下文窗口预算分配
 
@@ -277,14 +268,10 @@ class TokenManager:
                 }
         """
         system_tokens = sum(
-            self.count_message_tokens(m.get("content", ""))
-            for m in messages
-            if m.get("role") == "system"
+            self.count_message_tokens(m.get("content", "")) for m in messages if m.get("role") == "system"
         )
         conversation_tokens = sum(
-            self.count_message_tokens(m.get("content", ""))
-            for m in messages
-            if m.get("role") != "system"
+            self.count_message_tokens(m.get("content", "")) for m in messages if m.get("role") != "system"
         )
         total_tokens = system_tokens + conversation_tokens
         usage_ratio = total_tokens / self.context_window if self.context_window > 0 else 0.0

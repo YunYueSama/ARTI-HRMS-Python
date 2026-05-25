@@ -20,7 +20,7 @@ from app.schemas.attendance import AttendanceCreate, AttendanceQuery, Attendance
 from app.schemas.common import PageResponse
 
 # 考勤时间标准
-STANDARD_CLOCK_IN = time(9, 0)   # 09:00
+STANDARD_CLOCK_IN = time(9, 0)  # 09:00
 STANDARD_CLOCK_OUT = time(18, 0)  # 18:00
 
 
@@ -98,9 +98,7 @@ async def list_attendance(query: AttendanceQuery, db: AsyncSession) -> PageRespo
 
 async def get_attendance(attendance_id: int, db: AsyncSession) -> AttendanceResponse:
     """根据ID获取考勤记录"""
-    result = await db.execute(
-        select(Attendance).where(Attendance.attendance_id == attendance_id)
-    )
+    result = await db.execute(select(Attendance).where(Attendance.attendance_id == attendance_id))
     record = result.scalar_one_or_none()
     if not record:
         raise NotFoundException(message="考勤记录不存在", detail=f"attendance_id={attendance_id}")
@@ -135,18 +133,14 @@ async def create_attendance(data: AttendanceCreate, db: AsyncSession) -> Attenda
     return AttendanceResponse.model_validate(record)
 
 
-async def update_attendance(
-    attendance_id: int, data: AttendanceUpdate, db: AsyncSession
-) -> AttendanceResponse:
+async def update_attendance(attendance_id: int, data: AttendanceUpdate, db: AsyncSession) -> AttendanceResponse:
     """
     更新考勤记录（部分更新）
 
     说明：如果更新了 clock_in 或 clock_out 且未手动指定 status，
          则重新自动计算状态。
     """
-    result = await db.execute(
-        select(Attendance).where(Attendance.attendance_id == attendance_id)
-    )
+    result = await db.execute(select(Attendance).where(Attendance.attendance_id == attendance_id))
     record = result.scalar_one_or_none()
     if not record:
         raise NotFoundException(message="考勤记录不存在", detail=f"attendance_id={attendance_id}")
@@ -173,9 +167,7 @@ async def update_attendance(
 
 async def delete_attendance(attendance_id: int, db: AsyncSession) -> None:
     """删除考勤记录"""
-    result = await db.execute(
-        select(Attendance).where(Attendance.attendance_id == attendance_id)
-    )
+    result = await db.execute(select(Attendance).where(Attendance.attendance_id == attendance_id))
     record = result.scalar_one_or_none()
     if not record:
         raise NotFoundException(message="考勤记录不存在", detail=f"attendance_id={attendance_id}")

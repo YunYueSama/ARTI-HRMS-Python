@@ -20,18 +20,16 @@ SSE 协议格式：
 """
 
 import logging
-from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy import delete, func, select, desc
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.chat.service import ChatService
 from app.core.config import settings
 from app.core.database import get_mysql_session
 from app.models.ai_chat import AiChatMessage
-from app.schemas.ai_chat import ChatHistoryQuery, ChatMessageResponse, ChatRequest
+from app.schemas.ai_chat import ChatMessageResponse, ChatRequest
 from app.schemas.common import ApiResponse, PageResponse, ok
 
 logger = logging.getLogger(__name__)
@@ -81,20 +79,24 @@ async def chat_stream(
             message=request.message,
             db=db,
         )
-        return ok(data={
-            "reply": result["reply"],
-            "role": "assistant",
-            "provider": result["provider"],
-            "model": result["model"],
-            "providerAvailable": result["providerAvailable"],
-        })
+        return ok(
+            data={
+                "reply": result["reply"],
+                "role": "assistant",
+                "provider": result["provider"],
+                "model": result["model"],
+                "providerAvailable": result["providerAvailable"],
+            }
+        )
     except Exception as e:
         logger.error(f"聊天异常: {e}")
-        return ok(data={
-            "reply": f"抱歉，模型连接出现问题：{str(e)}",
-            "role": "assistant",
-            "providerAvailable": False,
-        })
+        return ok(
+            data={
+                "reply": f"抱歉，模型连接出现问题：{str(e)}",
+                "role": "assistant",
+                "providerAvailable": False,
+            }
+        )
 
 
 # ============================================================
@@ -124,11 +126,7 @@ async def get_history(
         分页的聊天消息列表
     """
     # 查询总数
-    count_stmt = (
-        select(func.count())
-        .select_from(AiChatMessage)
-        .where(AiChatMessage.user_id == user_id)
-    )
+    count_stmt = select(func.count()).select_from(AiChatMessage).where(AiChatMessage.user_id == user_id)
     count_result = await db.execute(count_stmt)
     total = count_result.scalar() or 0
 
@@ -227,10 +225,7 @@ async def get_history_by_path(
     records = result.scalars().all()
 
     # 转换为响应模型，再逐条转字典（避免 Pydantic 包装 list 出问题）
-    items = [
-        ChatMessageResponse.model_validate(record).model_dump(mode="json")
-        for record in records
-    ]
+    items = [ChatMessageResponse.model_validate(record).model_dump(mode="json") for record in records]
     # 前端期望直接返回数组（不是分页对象）
     # 按时间正序返回（最早的在前，最新的在后）
     items.reverse()
@@ -269,13 +264,12 @@ async def _check_ollama_alive(base_url: str) -> bool:
     """检测 Ollama 服务是否实际运行中（TCP 端口探测）"""
     import asyncio
     from urllib.parse import urlparse
+
     try:
         parsed = urlparse(base_url)
         host = parsed.hostname or "127.0.0.1"
         port = parsed.port or 11434
-        _, writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port), timeout=2.0
-        )
+        _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=2.0)
         writer.close()
         await writer.wait_closed()
         return True
@@ -314,14 +308,16 @@ async def get_provider_info():
         fallback_config = settings.fallback_llm_config
         fallback_status = "active" if fallback_config.api_key else "disconnected"
 
-    return ok(data={
-        "provider": effective.provider,
-        "model": effective.model,
-        "status": primary_status,
-        "providerAvailable": primary_status == "active",
-        "apiKeyConfigured": bool(api_key_display),
-        "apiKeyPreview": api_key_display,
-        "fallbackProvider": settings.LLM_FALLBACK_PROVIDER,
-        "fallbackModel": settings.LLM_FALLBACK_MODEL,
-        "fallbackStatus": fallback_status,
-    })
+    return ok(
+        data={
+            "provider": effective.provider,
+            "model": effective.model,
+            "status": primary_status,
+            "providerAvailable": primary_status == "active",
+            "apiKeyConfigured": bool(api_key_display),
+            "apiKeyPreview": api_key_display,
+            "fallbackProvider": settings.LLM_FALLBACK_PROVIDER,
+            "fallbackModel": settings.LLM_FALLBACK_MODEL,
+            "fallbackStatus": fallback_status,
+        }
+    )

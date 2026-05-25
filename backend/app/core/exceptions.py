@@ -21,10 +21,11 @@
     # 全局异常处理器会自动捕获并返回标准化 JSON 响应
 """
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # 自定义异常类
 # ============================================================
+
 
 class NotFoundException(Exception):
     """
@@ -108,6 +110,7 @@ class UnauthorizedException(Exception):
 #      类似 Spring 的 @ControllerAdvice，统一处理所有未捕获的异常。
 #      确保任何情况下都返回标准化的 JSON 响应，前端可统一解析。
 # ============================================================
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     """

@@ -8,7 +8,7 @@ GraphRAG 知识图谱模块（ai/graph_rag/）
     - fusion: 向量检索 + 图谱查询融合搜索
 """
 
-from app.ai.graph_rag.knowledge_graph import HRKnowledgeGraph, hr_knowledge_graph
 from app.ai.graph_rag.fusion import fusion_search
+from app.ai.graph_rag.knowledge_graph import HRKnowledgeGraph, hr_knowledge_graph
 
 __all__ = ["HRKnowledgeGraph", "hr_knowledge_graph", "fusion_search"]

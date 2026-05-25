@@ -21,7 +21,7 @@ Java 对应关系：
     AgentTaskService 的中间变量 → AgentState 的中间状态
 """
 
-from typing import Any, Optional, TypedDict
+from typing import Any, TypedDict
 
 
 class AgentState(TypedDict, total=False):
@@ -45,48 +45,48 @@ class AgentState(TypedDict, total=False):
     # ========================================
     # 输入字段（由调用方设置）
     # ========================================
-    user_id: int                    # 发起指令的用户ID
-    command: str                    # 用户原始指令文本（如 "帮我请两天年假"）
+    user_id: int  # 发起指令的用户ID
+    command: str  # 用户原始指令文本（如 "帮我请两天年假"）
 
     # ========================================
     # 意图识别字段（由 intent_recognition 节点填充）
     # ========================================
-    intent: Optional[str]           # 识别到的意图类型
+    intent: str | None  # 识别到的意图类型
     # 可选值：leave.create / attendance.upsert / role-permission.update / unknown
 
     # ========================================
     # 执行计划字段（由 plan_generation 节点填充）
     # ========================================
-    plan: Optional[dict[str, Any]]  # 完整的执行计划（AgentPlan 的字典形式）
-    risk_level: Optional[str]       # 风险等级：low / medium / high
-    executable: bool                # 计划是否可执行（权限校验通过等）
-    warnings: list[str]             # 警告信息列表（如缺少权限、参数不完整等）
+    plan: dict[str, Any] | None  # 完整的执行计划（AgentPlan 的字典形式）
+    risk_level: str | None  # 风险等级：low / medium / high
+    executable: bool  # 计划是否可执行（权限校验通过等）
+    warnings: list[str]  # 警告信息列表（如缺少权限、参数不完整等）
 
     # ========================================
     # 审批字段（由 human_approval 节点填充）
     # ========================================
-    approval_status: Optional[str]  # 审批状态：pending / approved / rejected
-    requires_approval: bool         # 是否需要人工审批（当前所有任务都需要）
+    approval_status: str | None  # 审批状态：pending / approved / rejected
+    requires_approval: bool  # 是否需要人工审批（当前所有任务都需要）
 
     # ========================================
     # 执行字段（由 execution 节点填充）
     # ========================================
-    current_step: int               # 当前执行到的步骤序号
-    execution_results: list[dict]   # 每个步骤的执行结果列表
-    result_summary: Optional[str]   # 最终执行结果摘要
+    current_step: int  # 当前执行到的步骤序号
+    execution_results: list[dict]  # 每个步骤的执行结果列表
+    result_summary: str | None  # 最终执行结果摘要
 
     # ========================================
     # 错误字段（由各节点在出错时填充）
     # ========================================
-    error_history: list[str]        # 错误历史记录（用于调试和重试）
+    error_history: list[str]  # 错误历史记录（用于调试和重试）
 
     # ========================================
     # 元数据字段（由服务层设置）
     # ========================================
-    task_id: Optional[int]          # 数据库中的任务ID（保存后回填）
-    provider_name: Optional[str]    # 使用的 LLM 提供商名称
+    task_id: int | None  # 数据库中的任务ID（保存后回填）
+    provider_name: str | None  # 使用的 LLM 提供商名称
 
     # ========================================
     # DraftPlan 中间结果（意图识别的原始输出）
     # ========================================
-    draft_plan: Optional[dict[str, Any]]  # LLM 或规则引擎输出的草稿计划
+    draft_plan: dict[str, Any] | None  # LLM 或规则引擎输出的草稿计划

@@ -24,14 +24,12 @@
 """
 
 import logging
-from typing import Optional
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.rag.models import RagChunk, RagDocument
+from app.ai.rag.models import RagChunk
 from app.ai.rag.pipeline import generate_embeddings
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +40,7 @@ DEFAULT_SIMILARITY_THRESHOLD = 0.5
 async def search(
     query: str,
     top_k: int = 5,
-    db: Optional[AsyncSession] = None,
+    db: AsyncSession | None = None,
     similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
 ) -> list[dict]:
     """
@@ -119,19 +117,19 @@ async def search(
     for row in rows:
         similarity = float(row.similarity)
         if similarity >= similarity_threshold:
-            results.append({
-                "content": row.content,
-                "score": round(similarity, 4),
-                "doc_id": row.doc_id,
-                "chunk_index": row.chunk_index,
-                "filename": row.filename,
-                "token_count": row.token_count,
-            })
+            results.append(
+                {
+                    "content": row.content,
+                    "score": round(similarity, 4),
+                    "doc_id": row.doc_id,
+                    "chunk_index": row.chunk_index,
+                    "filename": row.filename,
+                    "token_count": row.token_count,
+                }
+            )
 
     logger.info(
-        f"语义搜索完成: query='{query[:50]}...', "
-        f"结果数={len(results)}/{len(rows)}, "
-        f"阈值={similarity_threshold}"
+        f"语义搜索完成: query='{query[:50]}...', " f"结果数={len(results)}/{len(rows)}, " f"阈值={similarity_threshold}"
     )
 
     return results
@@ -140,7 +138,7 @@ async def search(
 async def get_rag_context(
     query: str,
     top_k: int = 5,
-    db: Optional[AsyncSession] = None,
+    db: AsyncSession | None = None,
     similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
 ) -> str:
     """
@@ -213,23 +211,13 @@ async def get_document_chunks(
     from sqlalchemy import func as sa_func
 
     # 查询总数
-    count_stmt = (
-        select(sa_func.count())
-        .select_from(RagChunk)
-        .where(RagChunk.doc_id == doc_id)
-    )
+    count_stmt = select(sa_func.count()).select_from(RagChunk).where(RagChunk.doc_id == doc_id)
     total_result = await db.execute(count_stmt)
     total = total_result.scalar() or 0
 
     # 查询分页数据
     offset = (page - 1) * size
-    stmt = (
-        select(RagChunk)
-        .where(RagChunk.doc_id == doc_id)
-        .order_by(RagChunk.chunk_index)
-        .offset(offset)
-        .limit(size)
-    )
+    stmt = select(RagChunk).where(RagChunk.doc_id == doc_id).order_by(RagChunk.chunk_index).offset(offset).limit(size)
     result = await db.execute(stmt)
     chunks = result.scalars().all()
 

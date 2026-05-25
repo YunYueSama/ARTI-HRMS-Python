@@ -19,7 +19,6 @@ Java 对应关系：
 
 import asyncio
 import logging
-from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
@@ -65,15 +64,15 @@ def get_chat_model(provider_config: LLMProviderConfig) -> BaseChatModel:
 
     return ChatOpenAI(
         base_url=provider_config.base_url,
-        api_key=provider_config.api_key,
+        api_key=provider_config.api_key,  # type: ignore[arg-type]
         model=provider_config.model,
         temperature=provider_config.temperature,
-        max_tokens=provider_config.max_tokens,
+        max_tokens=provider_config.max_tokens,  # type: ignore[call-arg]
         streaming=True,  # 默认启用流式输出
     )
 
 
-def get_primary_model(runtime_overrides: dict | None = None) -> Optional[BaseChatModel]:
+def get_primary_model(runtime_overrides: dict | None = None) -> BaseChatModel | None:
     """
     获取主 LLM 模型实例
 
@@ -93,7 +92,7 @@ def get_primary_model(runtime_overrides: dict | None = None) -> Optional[BaseCha
     return get_chat_model(config)
 
 
-def get_fallback_model() -> Optional[BaseChatModel]:
+def get_fallback_model() -> BaseChatModel | None:
     """
     获取备用 LLM 模型实例（Ollama 本地）
 
@@ -133,7 +132,7 @@ async def call_with_retry(
     异常：
         最后一次重试仍失败时，抛出原始异常
     """
-    last_exception: Optional[Exception] = None
+    last_exception: Exception | None = None
 
     for attempt in range(max_retries):
         try:
@@ -146,9 +145,7 @@ async def call_with_retry(
             last_exception = e
             if attempt < max_retries - 1:
                 wait_seconds = 2**attempt  # 1s, 2s, 4s
-                logger.warning(
-                    f"LLM 调用失败（第 {attempt + 1} 次），{wait_seconds}s 后重试: {e}"
-                )
+                logger.warning(f"LLM 调用失败（第 {attempt + 1} 次），{wait_seconds}s 后重试: {e}")
                 await asyncio.sleep(wait_seconds)
             else:
                 logger.error(f"LLM 调用失败（已达最大重试次数 {max_retries}）: {e}")

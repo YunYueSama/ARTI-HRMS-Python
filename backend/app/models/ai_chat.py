@@ -6,7 +6,6 @@ AI 聊天消息模型（AiChatMessage）
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import BigInteger, Boolean, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -28,10 +27,10 @@ class AiChatMessage(Base):
     # 消息内容（TEXT 类型，非空）
     content: Mapped[str] = mapped_column(Text, nullable=False)
     # LLM 提供商名称
-    provider_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    provider_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # LLM 模型名称
-    model_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    model_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # 是否使用了系统数据（知识注入）
-    used_system_data: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    used_system_data: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     # 创建时间（非空）
     create_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)

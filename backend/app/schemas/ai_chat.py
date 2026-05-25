@@ -9,7 +9,6 @@ Java 对应关系：
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,8 +29,8 @@ class ChatMessageResponse(BaseModel):
     user_id: int = Field(description="用户ID")
     role: str = Field(description="消息角色（user/assistant）")
     content: str = Field(description="消息内容")
-    provider_name: Optional[str] = Field(default=None, description="LLM 提供商名称")
-    model_name: Optional[str] = Field(default=None, description="LLM 模型名称")
+    provider_name: str | None = Field(default=None, description="LLM 提供商名称")
+    model_name: str | None = Field(default=None, description="LLM 模型名称")
     create_time: datetime = Field(description="创建时间")
 
 

@@ -23,15 +23,12 @@ from app.schemas.permission import (
     RoleUpdate,
 )
 
-
 # ============================================================
 # 角色 CRUD
 # ============================================================
 
 
-async def list_roles(
-    page: int, size: int, keyword: str | None, db: AsyncSession
-) -> PageResponse[RoleResponse]:
+async def list_roles(page: int, size: int, keyword: str | None, db: AsyncSession) -> PageResponse[RoleResponse]:
     """
     分页查询角色列表
 
@@ -123,9 +120,7 @@ async def list_all_permissions(db: AsyncSession) -> list[PermissionResponse]:
 
     说明：按 sort_order 和 perm_id 排序，前端自行构建树形结构。
     """
-    result = await db.execute(
-        select(Permission).order_by(Permission.sort_order.asc(), Permission.perm_id.asc())
-    )
+    result = await db.execute(select(Permission).order_by(Permission.sort_order.asc(), Permission.perm_id.asc()))
     permissions = result.scalars().all()
     return [PermissionResponse.model_validate(p) for p in permissions]
 
@@ -143,16 +138,12 @@ async def list_perm_ids_by_role(role_id: int, db: AsyncSession) -> list[int]:
         raise NotFoundException(message="角色不存在", detail=f"role_id={role_id}")
 
     result = await db.execute(
-        select(RolePermission.perm_id)
-        .where(RolePermission.role_id == role_id)
-        .order_by(RolePermission.perm_id.asc())
+        select(RolePermission.perm_id).where(RolePermission.role_id == role_id).order_by(RolePermission.perm_id.asc())
     )
-    return list(result.scalars().all())
+    return [x for x in result.scalars().all() if x is not None]
 
 
-async def replace_role_permissions(
-    role_id: int, data: RolePermissionUpdateRequest, db: AsyncSession
-) -> list[int]:
+async def replace_role_permissions(role_id: int, data: RolePermissionUpdateRequest, db: AsyncSession) -> list[int]:
     """
     替换角色的所有权限（先删后增）
 
@@ -165,9 +156,7 @@ async def replace_role_permissions(
         raise NotFoundException(message="角色不存在", detail=f"role_id={role_id}")
 
     # 删除现有关联
-    existing = await db.execute(
-        select(RolePermission).where(RolePermission.role_id == role_id)
-    )
+    existing = await db.execute(select(RolePermission).where(RolePermission.role_id == role_id))
     for rp in existing.scalars().all():
         await db.delete(rp)
     await db.flush()

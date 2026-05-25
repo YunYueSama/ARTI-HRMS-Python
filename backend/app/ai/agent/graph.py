@@ -62,6 +62,7 @@ Java 对应关系：
 """
 
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 # 节点函数按需导入，避免模块导入时立即解析大型或可能损坏的文件
 from app.ai.agent.state import AgentState
@@ -133,7 +134,7 @@ def _route_after_execution(state: AgentState) -> str:
     return "result_reporting"
 
 
-def build_agent_graph() -> StateGraph:
+def build_agent_graph() -> CompiledStateGraph:
     """
     构建 Agent 状态图
 

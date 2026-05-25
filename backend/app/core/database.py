@@ -28,6 +28,8 @@
         return result.scalars().all()
 """
 
+from collections.abc import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -35,7 +37,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
-from typing import AsyncGenerator, Optional
 
 from app.core.config import settings
 
@@ -45,6 +46,7 @@ from app.core.config import settings
 # ============================================================
 class Base(DeclarativeBase):
     """SQLAlchemy ORM 声明式基类，所有模型继承此类"""
+
     pass
 
 
@@ -58,14 +60,14 @@ PgVectorBase = Base
 #      为了向后兼容，仍然导出 mysql_engine / MySQLSessionFactory 名称，
 #      但它们指向的是同一个 PG 实例。
 # ============================================================
-pg_engine: Optional[AsyncEngine] = None
-SessionFactory: Optional[async_sessionmaker[AsyncSession]] = None
+pg_engine: AsyncEngine | None = None
+SessionFactory: async_sessionmaker[AsyncSession] | None = None
 
 # 兼容别名（旧代码用的 mysql_engine / pgvector_engine 都指向同一个 PG 引擎）
-mysql_engine: Optional[AsyncEngine] = None
-pgvector_engine: Optional[AsyncEngine] = None
-MySQLSessionFactory: Optional[async_sessionmaker[AsyncSession]] = None
-PgVectorSessionFactory: Optional[async_sessionmaker[AsyncSession]] = None
+mysql_engine: AsyncEngine | None = None
+pgvector_engine: AsyncEngine | None = None
+MySQLSessionFactory: async_sessionmaker[AsyncSession] | None = None
+PgVectorSessionFactory: async_sessionmaker[AsyncSession] | None = None
 
 
 def init_engines() -> None:

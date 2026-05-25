@@ -5,8 +5,6 @@
      实现角色与权限的多对多关联关系。
 """
 
-from typing import Optional
-
 from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,6 +19,6 @@ class RolePermission(Base):
     # 关联记录ID（主键，自增）
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 角色ID
-    role_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    role_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 权限ID
-    perm_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    perm_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

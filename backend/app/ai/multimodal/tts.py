@@ -20,8 +20,6 @@
 
 import io
 import logging
-import tempfile
-from pathlib import Path
 
 from app.core.config import settings
 
@@ -33,17 +31,15 @@ logger = logging.getLogger(__name__)
 # ============================================================
 try:
     import edge_tts
+
     EDGE_TTS_AVAILABLE = True
     logger.info("edge-tts 已加载")
 except ImportError:
     EDGE_TTS_AVAILABLE = False
-    logger.warning(
-        "edge-tts 未安装，文字转语音功能不可用。"
-        "安装方式: pip install edge-tts"
-    )
+    logger.warning("edge-tts 未安装，文字转语音功能不可用。" "安装方式: pip install edge-tts")
 
 
-async def text_to_speech(text: str, voice: str = None) -> bytes:
+async def text_to_speech(text: str, voice: str | None = None) -> bytes:
     """
     将文本转换为语音音频（MP3 格式）
 
@@ -70,10 +66,7 @@ async def text_to_speech(text: str, voice: str = None) -> bytes:
         raise ValueError("文本内容不能为空")
 
     if not EDGE_TTS_AVAILABLE:
-        raise RuntimeError(
-            "edge-tts 未安装，无法进行文字转语音。"
-            "请安装: pip install edge-tts"
-        )
+        raise RuntimeError("edge-tts 未安装，无法进行文字转语音。" "请安装: pip install edge-tts")
 
     # 使用配置中的默认语音或传入的语音
     voice_name = voice or settings.TTS_VOICE

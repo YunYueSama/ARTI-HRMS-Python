@@ -24,10 +24,10 @@ Java 对应关系：
 """
 
 import logging
-from typing import AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,11 +39,10 @@ from app.ai.chat.llm_provider import (
     get_fallback_model,
     get_primary_model,
 )
-from app.core.config import get_runtime_overrides
 from app.ai.chat.memory import DatabaseChatMemory
 from app.ai.chat.prompts import build_system_prompt, get_few_shot_examples
 from app.ai.knowledge.service import query_knowledge
-from app.core.config import settings
+from app.core.config import get_runtime_overrides, settings
 from app.schemas.agent import MessageCategory
 
 logger = logging.getLogger(__name__)
@@ -71,8 +70,8 @@ class ChatService:
              支持运行时配置变更：当 PUT /api/config/model 更新配置后，
              下次调用会自动重新创建模型实例。
         """
-        self._primary_model: Optional[BaseChatModel] = None
-        self._fallback_model: Optional[BaseChatModel] = None
+        self._primary_model: BaseChatModel | None = None
+        self._fallback_model: BaseChatModel | None = None
         self._initialized = False
         self._last_config_hash: str = ""
 
@@ -159,9 +158,7 @@ class ChatService:
                     full_response += chunk
                     yield chunk
                 provider_name = settings.LLM_PRIMARY_PROVIDER
-                model_name = get_effective_primary_config(
-                    get_runtime_overrides() or None
-                ).model
+                model_name = get_effective_primary_config(get_runtime_overrides() or None).model
             except Exception as e:
                 logger.warning(f"主模型流式调用失败: {e}")
                 full_response = ""  # 重置，尝试备用模型
@@ -221,6 +218,7 @@ class ChatService:
             dict: {reply, provider, model, providerAvailable}
         """
         import time
+
         from app.ai.observability.tracer import langfuse_tracer
 
         self._ensure_initialized()
@@ -259,9 +257,7 @@ class ChatService:
                 try:
                     reply = await call_with_retry(self._primary_model, messages)
                     provider_name = settings.LLM_PRIMARY_PROVIDER
-                    model_name = get_effective_primary_config(
-                        get_runtime_overrides() or None
-                    ).model
+                    model_name = get_effective_primary_config(get_runtime_overrides() or None).model
                 except Exception as e:
                     logger.warning(f"主模型同步调用失败: {e}")
 
@@ -340,10 +336,11 @@ class ChatService:
         说明：替代了旧版的内存 TraceStore，重启后数据不丢。
         """
         # 延迟 import 避免循环依赖
+        from datetime import datetime
+
+        from app.ai.observability.token_counter import calculate_cost, count_tokens
         from app.routers.observability import trace_store
         from app.schemas.observability import TraceRecord
-        from app.ai.observability.token_counter import count_tokens, calculate_cost
-        from datetime import datetime
 
         input_tokens = count_tokens(input_text, model_name)
         output_tokens = count_tokens(output_text, model_name)
@@ -392,22 +389,26 @@ class ChatService:
             str: 模型生成的文本片段
         """
         # 构建 LCEL 链
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", "{system_prompt}"),
-            ("system", "{few_shot}"),
-            MessagesPlaceholder(variable_name="history"),
-            ("human", "{input}"),
-        ])
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", "{system_prompt}"),
+                ("system", "{few_shot}"),
+                MessagesPlaceholder(variable_name="history"),
+                ("human", "{input}"),
+            ]
+        )
 
         chain = prompt | model | StrOutputParser()
 
         # 流式调用
-        async for chunk in chain.astream({
-            "system_prompt": system_prompt,
-            "few_shot": few_shot,
-            "history": history,
-            "input": user_message,
-        }):
+        async for chunk in chain.astream(
+            {
+                "system_prompt": system_prompt,
+                "few_shot": few_shot,
+                "history": history,
+                "input": user_message,
+            }
+        ):
             if chunk:
                 yield chunk
 
@@ -436,10 +437,7 @@ class ChatService:
              如果有知识上下文，会将系统数据包含在回复中。
              类似 Java 版 AiChatService.buildFallbackReply()。
         """
-        parts = [
-            "我是亚托莉。虽然这次模型连接没有成功，不过主人先别着急，"
-            "高性能的我还是会先把能确认的信息告诉你。"
-        ]
+        parts = ["我是亚托莉。虽然这次模型连接没有成功，不过主人先别着急，" "高性能的我还是会先把能确认的信息告诉你。"]
 
         if knowledge_context.strip():
             parts.append("")

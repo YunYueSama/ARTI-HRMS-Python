@@ -22,15 +22,14 @@ Java 对应关系：
 """
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.graph_rag.knowledge_graph import hr_knowledge_graph
 from app.core.database import get_mysql_session
-from app.core.dependencies import get_current_user, TokenPayload
-from app.schemas.common import ApiResponse, ok, fail
+from app.core.dependencies import TokenPayload, get_current_user
+from app.schemas.common import ApiResponse, fail, ok
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ router = APIRouter()
 
 @router.get("/nodes", summary="列出图谱节点")
 async def list_nodes(
-    node_type: Optional[str] = Query(
+    node_type: str | None = Query(
         default=None,
         description="节点类型过滤（employee/department/position/role）",
     ),
@@ -79,12 +78,14 @@ async def list_nodes(
     for node_id, attrs in graph.nodes(data=True):
         if node_type and attrs.get("type") != node_type:
             continue
-        all_nodes.append({
-            "id": node_id,
-            "name": attrs.get("name", node_id),
-            "type": attrs.get("type", "unknown"),
-            "entity_id": attrs.get("entity_id"),
-        })
+        all_nodes.append(
+            {
+                "id": node_id,
+                "name": attrs.get("name", node_id),
+                "type": attrs.get("type", "unknown"),
+                "entity_id": attrs.get("entity_id"),
+            }
+        )
 
     # 分页
     total = len(all_nodes)
@@ -100,7 +101,7 @@ async def list_nodes(
 
 @router.get("/edges", summary="列出图谱边")
 async def list_edges(
-    relation: Optional[str] = Query(
+    relation: str | None = Query(
         default=None,
         description="关系类型过滤（belongs_to/holds/has_role/parent_of）",
     ),
@@ -145,14 +146,16 @@ async def list_edges(
         source_attrs = graph.nodes.get(source, {})
         target_attrs = graph.nodes.get(target, {})
 
-        all_edges.append({
-            "source": source,
-            "source_name": source_attrs.get("name", source),
-            "target": target,
-            "target_name": target_attrs.get("name", target),
-            "relation": edge_relation,
-            "label": attrs.get("label", ""),
-        })
+        all_edges.append(
+            {
+                "source": source,
+                "source_name": source_attrs.get("name", source),
+                "target": target,
+                "target_name": target_attrs.get("name", target),
+                "relation": edge_relation,
+                "label": attrs.get("label", ""),
+            }
+        )
 
     # 分页
     total = len(all_edges)
@@ -258,9 +261,7 @@ async def query_relationships(
             }
         }
     """
-    results = hr_knowledge_graph.query_relationships(
-        entity_name=entity_name, max_hops=max_hops
-    )
+    results = hr_knowledge_graph.query_relationships(entity_name=entity_name, max_hops=max_hops)
 
     return ok(
         data={

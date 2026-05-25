@@ -22,7 +22,6 @@ Java 对应关系：
 
 import json
 import logging
-from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -104,7 +103,7 @@ def parse_draft_plan(llm_response: str) -> DraftPlan:
         # 去除开头的 ```json 或 ```
         first_newline = content.find("\n")
         if first_newline != -1:
-            content = content[first_newline + 1:]
+            content = content[first_newline + 1 :]
         # 去除结尾的 ```
         if content.endswith("```"):
             content = content[:-3]
@@ -128,7 +127,7 @@ def parse_draft_plan(llm_response: str) -> DraftPlan:
 async def call_llm_with_structured_output(
     model: BaseChatModel,
     command: str,
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     max_retries: int = 2,
 ) -> DraftPlan:
     """
@@ -156,7 +155,7 @@ async def call_llm_with_structured_output(
         Exception: 所有重试都失败后抛出最后一次的异常
     """
     prompt = system_prompt or AGENT_SYSTEM_PROMPT
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
 
     for attempt in range(max_retries + 1):
         try:
@@ -196,13 +195,9 @@ async def call_llm_with_structured_output(
         except (ValidationError, json.JSONDecodeError, ValueError) as e:
             last_error = e
             if attempt < max_retries:
-                logger.warning(
-                    f"LLM 结构化输出解析失败（第 {attempt + 1} 次），准备重试: {e}"
-                )
+                logger.warning(f"LLM 结构化输出解析失败（第 {attempt + 1} 次），准备重试: {e}")
             else:
-                logger.error(
-                    f"LLM 结构化输出解析失败（已达最大重试次数 {max_retries + 1}）: {e}"
-                )
+                logger.error(f"LLM 结构化输出解析失败（已达最大重试次数 {max_retries + 1}）: {e}")
 
         except Exception as e:
             # 网络错误等非解析错误，直接抛出不重试
@@ -214,9 +209,9 @@ async def call_llm_with_structured_output(
 
 
 def build_agent_system_prompt(
-    user_context: Optional[dict] = None,
-    available_roles: Optional[list[str]] = None,
-    available_permissions: Optional[list[str]] = None,
+    user_context: dict | None = None,
+    available_roles: list[str] | None = None,
+    available_permissions: list[str] | None = None,
 ) -> str:
     """
     构建 Agent 意图识别的系统提示词（增强版）
@@ -240,9 +235,7 @@ def build_agent_system_prompt(
     if user_context:
         context_parts.append(f"当前用户信息: {json.dumps(user_context, ensure_ascii=False)}")
 
-    context_parts.append(
-        '可用请假类型: ["年假", "病假", "事假", "婚假", "产假", "陪产假", "丧假"]'
-    )
+    context_parts.append('可用请假类型: ["年假", "病假", "事假", "婚假", "产假", "陪产假", "丧假"]')
 
     if available_roles:
         roles_str = json.dumps(available_roles[:20], ensure_ascii=False)

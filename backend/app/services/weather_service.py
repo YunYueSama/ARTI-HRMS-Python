@@ -29,7 +29,6 @@ Java 对应关系：
 """
 
 import logging
-from typing import Optional
 
 import httpx
 
@@ -76,6 +75,7 @@ async def get_weather(city_name: str) -> dict:
     # 检查 API Key 是否配置
     # 优先从 settings 读取（.env 或系统环境变量），再尝试直接读系统环境变量
     import os
+
     api_key = settings.WEATHER_AMAP_KEY
     if not api_key or api_key == "your_amap_key_here":
         api_key = os.environ.get("WEATHER_AMAP_KEY", "")
@@ -164,9 +164,7 @@ async def get_weather(city_name: str) -> dict:
         }
 
 
-async def _get_adcode(
-    client: httpx.AsyncClient, city_name: str, api_key: str
-) -> Optional[str]:
+async def _get_adcode(client: httpx.AsyncClient, city_name: str, api_key: str) -> str | None:
     """
     通过城市名称获取行政区划代码（adcode）
 
@@ -205,12 +203,10 @@ async def _get_adcode(
 
     adcode = geocodes[0].get("adcode")
     logger.debug(f"地理编码: {city_name} → adcode={adcode}")
-    return adcode
+    return str(adcode) if adcode else None
 
 
-async def _get_weather_info(
-    client: httpx.AsyncClient, adcode: str, api_key: str
-) -> Optional[dict]:
+async def _get_weather_info(client: httpx.AsyncClient, adcode: str, api_key: str) -> dict | None:
     """
     通过 adcode 查询实时天气
 
@@ -257,8 +253,5 @@ async def _get_weather_info(
         "humidity": weather.get("humidity", "未知"),
     }
 
-    logger.info(
-        f"天气查询成功: {result['city']} - "
-        f"{result['weather']} {result['temperature']}°C"
-    )
+    logger.info(f"天气查询成功: {result['city']} - " f"{result['weather']} {result['temperature']}°C")
     return result

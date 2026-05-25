@@ -11,10 +11,8 @@ Java 对应关系：
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 # ============================================================
 # 角色管理
@@ -28,7 +26,7 @@ class RoleCreate(BaseModel):
 
     role_name: str = Field(min_length=1, description="角色名称")
     role_code: str = Field(min_length=1, description="角色编码")
-    role_desc: Optional[str] = Field(default=None, description="角色描述")
+    role_desc: str | None = Field(default=None, description="角色描述")
 
 
 class RoleUpdate(BaseModel):
@@ -36,9 +34,9 @@ class RoleUpdate(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    role_name: Optional[str] = Field(default=None, description="角色名称")
-    role_code: Optional[str] = Field(default=None, description="角色编码")
-    role_desc: Optional[str] = Field(default=None, description="角色描述")
+    role_name: str | None = Field(default=None, description="角色名称")
+    role_code: str | None = Field(default=None, description="角色编码")
+    role_desc: str | None = Field(default=None, description="角色描述")
 
 
 class RoleResponse(BaseModel):
@@ -47,10 +45,10 @@ class RoleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     role_id: int = Field(description="角色ID")
-    role_name: Optional[str] = Field(default=None, description="角色名称")
-    role_code: Optional[str] = Field(default=None, description="角色编码")
-    role_desc: Optional[str] = Field(default=None, description="角色描述")
-    create_time: Optional[datetime] = Field(default=None, description="创建时间")
+    role_name: str | None = Field(default=None, description="角色名称")
+    role_code: str | None = Field(default=None, description="角色编码")
+    role_desc: str | None = Field(default=None, description="角色描述")
+    create_time: datetime | None = Field(default=None, description="创建时间")
 
 
 # ============================================================
@@ -64,14 +62,14 @@ class PermissionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     perm_id: int = Field(description="权限ID")
-    perm_name: Optional[str] = Field(default=None, description="权限名称")
-    perm_code: Optional[str] = Field(default=None, description="权限编码")
-    perm_type: Optional[str] = Field(default=None, description="权限类型（menu/button）")
-    parent_id: Optional[int] = Field(default=None, description="父级权限ID")
-    path: Optional[str] = Field(default=None, description="前端路由路径")
-    icon: Optional[str] = Field(default=None, description="图标名称")
-    sort_order: Optional[int] = Field(default=None, description="排序序号")
-    create_time: Optional[datetime] = Field(default=None, description="创建时间")
+    perm_name: str | None = Field(default=None, description="权限名称")
+    perm_code: str | None = Field(default=None, description="权限编码")
+    perm_type: str | None = Field(default=None, description="权限类型（menu/button）")
+    parent_id: int | None = Field(default=None, description="父级权限ID")
+    path: str | None = Field(default=None, description="前端路由路径")
+    icon: str | None = Field(default=None, description="图标名称")
+    sort_order: int | None = Field(default=None, description="排序序号")
+    create_time: datetime | None = Field(default=None, description="创建时间")
 
 
 # ============================================================
@@ -85,7 +83,7 @@ class RolePermissionUpdateRequest(BaseModel):
     说明：支持前端发送 camelCase 字段名 permIds，也支持 snake_case perm_ids。
     """
 
-    role_id: Optional[int] = Field(default=None, description="角色ID（可选，路径参数已提供）")
+    role_id: int | None = Field(default=None, description="角色ID（可选，路径参数已提供）")
     perm_ids: list[int] = Field(default_factory=list, alias="permIds", description="权限ID列表")
 
     model_config = ConfigDict(populate_by_name=True)

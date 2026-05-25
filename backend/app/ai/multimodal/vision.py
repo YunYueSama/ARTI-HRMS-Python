@@ -54,18 +54,13 @@ async def analyze_image(file_path: str, prompt: str = "") -> str:
     # 验证文件格式
     suffix = Path(file_path).suffix.lower()
     if suffix not in SUPPORTED_IMAGE_FORMATS:
-        raise ValueError(
-            f"不支持的图像格式: {suffix}，"
-            f"支持的格式: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
-        )
+        raise ValueError(f"不支持的图像格式: {suffix}，" f"支持的格式: {', '.join(SUPPORTED_IMAGE_FORMATS)}")
 
     # 获取文件信息
     file_size = os.path.getsize(file_path)
     file_name = Path(file_path).name
 
-    logger.info(
-        f"分析图像: {file_name} (size={file_size} bytes, prompt='{prompt[:50]}')"
-    )
+    logger.info(f"分析图像: {file_name} (size={file_size} bytes, prompt='{prompt[:50]}')")
 
     # ============================================================
     # 占位实现
@@ -102,14 +97,10 @@ async def analyze_image(file_path: str, prompt: str = "") -> str:
     if prompt:
         description_parts.append(f"分析提示: {prompt}")
         description_parts.append(
-            "注意：当前为占位实现，未接入真实视觉模型。"
-            "请配置多模态视觉模型（如 Qwen-VL）以启用图像分析功能。"
+            "注意：当前为占位实现，未接入真实视觉模型。" "请配置多模态视觉模型（如 Qwen-VL）以启用图像分析功能。"
         )
     else:
-        description_parts.append(
-            "这是一张图像文件。当前为占位实现，"
-            "请配置多模态视觉模型以获取真实的图像分析结果。"
-        )
+        description_parts.append("这是一张图像文件。当前为占位实现，" "请配置多模态视觉模型以获取真实的图像分析结果。")
 
     result = "\n".join(description_parts)
     logger.info(f"图像分析完成（占位）: {file_name}")

@@ -26,19 +26,15 @@ import json
 import logging
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.agent.graph import get_agent_graph
-from app.ai.agent.state import AgentState
 from app.core.exceptions import BusinessException, NotFoundException
 from app.models.agent import AgentApprovalRecord, AgentExecutionLog, AgentTask
 from app.models.attendance import Attendance
 from app.models.leave_request import LeaveRequest
-from app.models.permission import Permission
-from app.models.role import Role
 from app.models.role_permission import RolePermission
 from app.schemas.agent import AgentPlan, AgentTaskView, ApproveRequest, PlanRequest
 
@@ -135,9 +131,7 @@ async def plan_task(request: PlanRequest, db: AsyncSession) -> AgentTaskView:
     return await _to_view(task, db)
 
 
-async def approve_and_execute(
-    task_id: int, request: ApproveRequest, db: AsyncSession
-) -> AgentTaskView:
+async def approve_and_execute(task_id: int, request: ApproveRequest, db: AsyncSession) -> AgentTaskView:
     """
     审批并执行 Agent 任务
 
@@ -273,16 +267,12 @@ async def delete_task(task_id: int, request: ApproveRequest, db: AsyncSession) -
         raise BusinessException(message="只有任务创建者可以删除此任务")
 
     # 删除关联的日志记录
-    logs_result = await db.execute(
-        select(AgentExecutionLog).where(AgentExecutionLog.task_id == task_id)
-    )
+    logs_result = await db.execute(select(AgentExecutionLog).where(AgentExecutionLog.task_id == task_id))
     for log_record in logs_result.scalars().all():
         await db.delete(log_record)
 
     # 删除关联的审批记录
-    approvals_result = await db.execute(
-        select(AgentApprovalRecord).where(AgentApprovalRecord.task_id == task_id)
-    )
+    approvals_result = await db.execute(select(AgentApprovalRecord).where(AgentApprovalRecord.task_id == task_id))
     for approval in approvals_result.scalars().all():
         await db.delete(approval)
 
@@ -306,10 +296,7 @@ async def list_tasks(user_id: int, db: AsyncSession) -> list[AgentTaskView]:
         AgentTaskView 列表
     """
     result = await db.execute(
-        select(AgentTask)
-        .where(AgentTask.user_id == user_id)
-        .order_by(AgentTask.create_time.desc())
-        .limit(50)
+        select(AgentTask).where(AgentTask.user_id == user_id).order_by(AgentTask.create_time.desc()).limit(50)
     )
     tasks = result.scalars().all()
     views = []
@@ -338,9 +325,7 @@ async def get_task(task_id: int, db: AsyncSession) -> AgentTaskView:
 # ============================================================
 
 
-async def _execute_plan(
-    task_id: int, intent: str, plan: dict, user_id: int, db: AsyncSession
-) -> str:
+async def _execute_plan(task_id: int, intent: str, plan: dict, user_id: int, db: AsyncSession) -> str:
     """
     根据意图类型执行计划
 
@@ -357,16 +342,13 @@ async def _execute_plan(
         raise BusinessException(message="不支持的任务类型")
 
 
-async def _execute_leave(
-    task_id: int, plan: dict, user_id: int, db: AsyncSession
-) -> str:
+async def _execute_leave(task_id: int, plan: dict, user_id: int, db: AsyncSession) -> str:
     """
     执行请假申请
 
     说明：对应 Java 的 AgentTaskService.executeLeave() 方法。
          从计划预览中提取参数，创建请假记录。
     """
-    from app.models.employee import Employee
     from app.models.approval import ApprovalRule
 
     preview = plan.get("preview", {})
@@ -395,6 +377,7 @@ async def _execute_leave(
 
     # 查找用户关联的员工ID
     from app.models.sys_user import SysUser
+
     user_result = await db.execute(select(SysUser).where(SysUser.user_id == user_id))
     user = user_result.scalar_one_or_none()
     emp_id = user.emp_id if user else None
@@ -404,9 +387,7 @@ async def _execute_leave(
 
     # 查找审批规则
     rules_result = await db.execute(
-        select(ApprovalRule)
-        .where(ApprovalRule.type_code == "leave")
-        .order_by(ApprovalRule.sort_order.asc())
+        select(ApprovalRule).where(ApprovalRule.type_code == "leave").order_by(ApprovalRule.sort_order.asc())
     )
     rules = rules_result.scalars().all()
     first_approver_tag = "ADMIN"
@@ -425,6 +406,7 @@ async def _execute_leave(
 
     # 解析日期
     from datetime import date as date_type
+
     try:
         start_date = date_type.fromisoformat(start_date_str) if start_date_str else date_type.today()
     except ValueError:
@@ -456,16 +438,14 @@ async def _execute_leave(
     return "请假申请提交成功"
 
 
-async def _execute_attendance(
-    task_id: int, plan: dict, user_id: int, db: AsyncSession
-) -> str:
+async def _execute_attendance(task_id: int, plan: dict, user_id: int, db: AsyncSession) -> str:
     """
     执行考勤记录操作
 
     说明：对应 Java 的 AgentTaskService.executeAttendance() 方法。
          如果指定日期已有记录则更新，否则创建新记录。
     """
-    from datetime import date as date_type, time as time_type
+    from datetime import date as date_type
 
     preview = plan.get("preview", {})
     attendance_date_str = str(preview.get("attendanceDate", ""))
@@ -485,6 +465,7 @@ async def _execute_attendance(
 
     # 查找用户关联的员工ID
     from app.models.sys_user import SysUser
+
     user_result = await db.execute(select(SysUser).where(SysUser.user_id == user_id))
     user = user_result.scalar_one_or_none()
     emp_id = user.emp_id if user else None
@@ -501,10 +482,7 @@ async def _execute_attendance(
     )
     existing = existing_result.scalar_one_or_none()
 
-    await _log(
-        db, task_id, 1, "info",
-        "已找到该日期的考勤记录" if existing else "该日期暂无考勤记录"
-    )
+    await _log(db, task_id, 1, "info", "已找到该日期的考勤记录" if existing else "该日期暂无考勤记录")
 
     # 计算考勤状态
     status = _resolve_attendance_status(clock_in, clock_out)
@@ -539,9 +517,7 @@ async def _execute_attendance(
         return "考勤记录创建成功"
 
 
-async def _execute_role_permission(
-    task_id: int, plan: dict, user_id: int, db: AsyncSession
-) -> str:
+async def _execute_role_permission(task_id: int, plan: dict, user_id: int, db: AsyncSession) -> str:
     """
     执行角色权限更新
 
@@ -557,9 +533,7 @@ async def _execute_role_permission(
         raise BusinessException(message="角色权限计划不完整")
 
     # 读取当前权限集
-    current_result = await db.execute(
-        select(RolePermission.perm_id).where(RolePermission.role_id == role_id)
-    )
+    current_result = await db.execute(select(RolePermission.perm_id).where(RolePermission.role_id == role_id))
     current_ids = list(current_result.scalars().all())
     await _log(db, task_id, 1, "info", "当前权限集已加载")
 
@@ -572,9 +546,7 @@ async def _execute_role_permission(
             next_ids.append(permission_id)
 
     # 删除现有关联
-    existing_rps = await db.execute(
-        select(RolePermission).where(RolePermission.role_id == role_id)
-    )
+    existing_rps = await db.execute(select(RolePermission).where(RolePermission.role_id == role_id))
     for rp in existing_rps.scalars().all():
         await db.delete(rp)
     await db.flush()
@@ -596,9 +568,7 @@ async def _execute_role_permission(
 
 async def _find_task(task_id: int, db: AsyncSession) -> AgentTask:
     """查找任务，不存在时抛出 NotFoundException"""
-    result = await db.execute(
-        select(AgentTask).where(AgentTask.task_id == task_id)
-    )
+    result = await db.execute(select(AgentTask).where(AgentTask.task_id == task_id))
     task = result.scalar_one_or_none()
     if not task:
         raise NotFoundException(message="代理任务不存在", detail=f"task_id={task_id}")
@@ -656,12 +626,13 @@ async def _to_view(task: AgentTask, db: AsyncSession) -> AgentTaskView:
     )
 
 
-def _read_plan(plan_json: Optional[str]) -> dict:
+def _read_plan(plan_json: str | None) -> dict:
     """解析计划 JSON 字符串为字典"""
     if not plan_json:
         return {}
     try:
-        return json.loads(plan_json)
+        result: dict = json.loads(plan_json)
+        return result
     except (json.JSONDecodeError, TypeError):
         return {}
 
@@ -669,6 +640,7 @@ def _read_plan(plan_json: Optional[str]) -> dict:
 def _parse_time(time_str: str):
     """解析 HH:mm 格式时间字符串为 time 对象"""
     from datetime import time as time_type
+
     if not time_str or time_str.strip().lower() in ("", "null", "none"):
         return None
     try:
@@ -685,6 +657,7 @@ def _resolve_attendance_status(clock_in, clock_out) -> str:
     说明：对应 Java 的 resolveAttendanceStatus() 方法。
     """
     from datetime import time as time_type
+
     standard_in = time_type(9, 0)
     standard_out = time_type(18, 0)
 
@@ -697,7 +670,7 @@ def _resolve_attendance_status(clock_in, clock_out) -> str:
     return "正常"
 
 
-def _cast_int(value) -> Optional[int]:
+def _cast_int(value) -> int | None:
     """安全转换为整数"""
     if value is None:
         return None

@@ -87,9 +87,7 @@ async def update_module_scope_config(
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
     """更新指定模块的数据范围配置"""
-    result = await db.execute(
-        select(ModuleScopeRule).where(ModuleScopeRule.module_code == module_code)
-    )
+    result = await db.execute(select(ModuleScopeRule).where(ModuleScopeRule.module_code == module_code))
     rule = result.scalar_one_or_none()
     if not rule:
         raise NotFoundException(message="模块范围规则不存在", detail=f"module_code={module_code}")

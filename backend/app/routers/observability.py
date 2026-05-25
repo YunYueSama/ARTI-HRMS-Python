@@ -13,7 +13,7 @@ API 端点：
 
 import logging
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import desc, func, select, update
@@ -27,7 +27,7 @@ from app.ai.observability.token_counter import (
 from app.ai.observability.tracer import langfuse_tracer
 from app.core.database import get_session
 from app.models.llm_trace import LlmTrace
-from app.schemas.common import ApiResponse, PageResponse, ok, fail
+from app.schemas.common import ApiResponse, PageResponse, fail, ok
 from app.schemas.observability import (
     FeedbackRequest,
     TokenUsageSummary,
@@ -108,15 +108,11 @@ trace_store = TraceStore()
 
 @router.get("", summary="查询追踪记录")
 async def query_traces(
-    user_id: Optional[int] = Query(default=None, description="按用户 ID 过滤"),
-    start_time: Optional[datetime] = Query(default=None, description="开始时间"),
-    end_time: Optional[datetime] = Query(default=None, description="结束时间"),
-    status: Optional[Literal["success", "error", "slow"]] = Query(
-        default=None, description="按状态过滤"
-    ),
-    operation_type: Optional[Literal["chat", "agent", "rag"]] = Query(
-        default=None, description="按操作类型过滤"
-    ),
+    user_id: int | None = Query(default=None, description="按用户 ID 过滤"),
+    start_time: datetime | None = Query(default=None, description="开始时间"),
+    end_time: datetime | None = Query(default=None, description="结束时间"),
+    status: Literal["success", "error", "slow"] | None = Query(default=None, description="按状态过滤"),
+    operation_type: Literal["chat", "agent", "rag"] | None = Query(default=None, description="按操作类型过滤"),
     page: int = Query(default=1, ge=1, description="页码"),
     size: int = Query(default=20, ge=1, le=500, description="每页大小"),
     db: AsyncSession = Depends(get_session),
@@ -154,17 +150,13 @@ async def query_traces(
     rows = list_result.scalars().all()
 
     records = [_row_to_record(r) for r in rows]
-    page_response = PageResponse[TraceRecord](
-        items=records, total=total, page=page, size=size
-    )
+    page_response = PageResponse[TraceRecord](items=records, total=total, page=page, size=size)
     return ok(data=page_response, message="查询成功")
 
 
 @router.get("/usage", summary="获取 Token 使用汇总")
 async def get_token_usage(
-    aggregation: Literal["daily", "weekly"] = Query(
-        default="daily", description="聚合方式（daily=按天, weekly=按周）"
-    ),
+    aggregation: Literal["daily", "weekly"] = Query(default="daily", description="聚合方式（daily=按天, weekly=按周）"),
     db: AsyncSession = Depends(get_session),
 ) -> ApiResponse[list[TokenUsageSummary]]:
     """
@@ -221,11 +213,7 @@ async def submit_feedback(
     说明：更新数据库中的 feedback 字段，同时尝试同步到 Langfuse（如果已配置）
     """
     # 更新数据库
-    stmt = (
-        update(LlmTrace)
-        .where(LlmTrace.trace_id == request.trace_id)
-        .values(feedback=request.score)
-    )
+    stmt = update(LlmTrace).where(LlmTrace.trace_id == request.trace_id).values(feedback=request.score)
     result = await db.execute(stmt)
 
     if result.rowcount == 0:
@@ -239,10 +227,7 @@ async def submit_feedback(
     )
 
     feedback_text = "👍 正面" if request.score == 1 else "👎 负面"
-    logger.info(
-        f"用户反馈已记录: trace_id={request.trace_id}, "
-        f"feedback={feedback_text}, user_id={request.user_id}"
-    )
+    logger.info(f"用户反馈已记录: trace_id={request.trace_id}, " f"feedback={feedback_text}, user_id={request.user_id}")
     return ok(message="反馈已记录")
 
 
@@ -250,7 +235,7 @@ async def submit_feedback(
 async def get_trace_detail(
     trace_id: str,
     db: AsyncSession = Depends(get_session),
-) -> ApiResponse[Optional[TraceRecord]]:
+) -> ApiResponse[TraceRecord | None]:
     """根据 trace_id 查询追踪记录的完整信息"""
     stmt = select(LlmTrace).where(LlmTrace.trace_id == trace_id)
     result = await db.execute(stmt)

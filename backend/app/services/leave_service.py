@@ -12,7 +12,6 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -80,9 +79,7 @@ async def _resolve_approval_chain(employee: Employee, leave_days: Decimal, db: A
 
     # 查询请假审批规则
     result = await db.execute(
-        select(ApprovalRule)
-        .where(ApprovalRule.type_code == RULE_TYPE_LEAVE)
-        .order_by(ApprovalRule.sort_order.asc())
+        select(ApprovalRule).where(ApprovalRule.type_code == RULE_TYPE_LEAVE).order_by(ApprovalRule.sort_order.asc())
     )
     rules = result.scalars().all()
 
@@ -188,9 +185,7 @@ async def get_leave_request(leave_id: int, db: AsyncSession) -> LeaveRequestResp
     return LeaveRequestResponse.model_validate(record)
 
 
-async def create_leave_request(
-    data: LeaveRequestCreate, db: AsyncSession
-) -> LeaveRequestResponse:
+async def create_leave_request(data: LeaveRequestCreate, db: AsyncSession) -> LeaveRequestResponse:
     """
     创建请假申请
 

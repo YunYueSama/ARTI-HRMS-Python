@@ -14,18 +14,16 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from app.ai.nlp_tools import NLPService
 from app.ai.chat.llm_provider import get_primary_model
+from app.ai.nlp_tools import NLPService
 from app.core.config import get_runtime_overrides
-from app.core.dependencies import get_current_user, TokenPayload
+from app.core.dependencies import TokenPayload, get_current_user
 from app.schemas.common import ApiResponse, ok
 from app.schemas.nlp import (
     KeywordExtractRequest,
     KeywordExtractResponse,
-    KeywordItem,
     SentimentAnalyzeRequest,
     SentimentAnalyzeResponse,
-    SentimentResult,
     TextAnalyzeRequest,
     TextAnalyzeResponse,
 )

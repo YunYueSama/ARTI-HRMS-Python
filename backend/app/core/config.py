@@ -11,9 +11,9 @@
 """
 
 import os
+
 from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict, DotEnvSettingsSource
-from typing import Optional, Tuple, Any, Type
+from pydantic_settings import BaseSettings, DotEnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 
 
 class LLMProviderConfig:
@@ -33,10 +33,10 @@ class LLMProviderConfig:
         temperature: float = 0.7,
         max_tokens: int = 2048,
     ):
-        self.provider = provider      # 提供商标识（dashscope/ollama）
-        self.base_url = base_url      # API 基础 URL
-        self.api_key = api_key        # API 密钥
-        self.model = model            # 模型名称
+        self.provider = provider  # 提供商标识（dashscope/ollama）
+        self.base_url = base_url  # API 基础 URL
+        self.api_key = api_key  # API 密钥
+        self.model = model  # 模型名称
         self.temperature = temperature  # 生成温度（0-1）
         self.max_tokens = max_tokens  # 最大输出 Token 数
 
@@ -61,9 +61,12 @@ class Settings(BaseSettings):
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: Type[BaseSettings],
-        **kwargs: Any,
-    ) -> Tuple[Any, ...]:
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
         """
         自定义配置加载源：仅从 .env 文件读取，不读取系统环境变量。
 
@@ -116,7 +119,7 @@ class Settings(BaseSettings):
     # ========================================
     JWT_SECRET_KEY: str = Field(
         default="your-super-secret-key-change-in-production",
-        description="JWT 签名密钥（生产环境必须修改为强随机字符串）"
+        description="JWT 签名密钥（生产环境必须修改为强随机字符串）",
     )
     JWT_ALGORITHM: str = Field(default="HS256", description="JWT 签名算法")
     JWT_EXPIRE_MINUTES: int = Field(default=1440, description="JWT Token 过期时间（分钟）")
@@ -128,8 +131,7 @@ class Settings(BaseSettings):
     # ========================================
     LLM_PRIMARY_PROVIDER: str = Field(default="dashscope", description="主 LLM 提供商标识")
     LLM_PRIMARY_BASE_URL: str = Field(
-        default="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        description="主 LLM API 基础 URL"
+        default="https://dashscope.aliyuncs.com/compatible-mode/v1", description="主 LLM API 基础 URL"
     )
     LLM_PRIMARY_API_KEY: str = Field(default="your_dashscope_api_key_here", description="主 LLM API 密钥")
     # 兼容 Java 版环境变量名（如果 LLM_PRIMARY_API_KEY 未配置，从这里读取）
@@ -190,8 +192,7 @@ class Settings(BaseSettings):
     # 用于 RAG 文档分块的向量化
     # ========================================
     EMBEDDING_BASE_URL: str = Field(
-        default="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        description="嵌入模型 API 地址"
+        default="https://dashscope.aliyuncs.com/compatible-mode/v1", description="嵌入模型 API 地址"
     )
     EMBEDDING_API_KEY: str = Field(default="your_dashscope_api_key_here", description="嵌入模型 API 密钥")
     EMBEDDING_MODEL: str = Field(default="text-embedding-v3", description="嵌入模型名称")
@@ -273,8 +274,7 @@ class Settings(BaseSettings):
     APP_HOST: str = Field(default="0.0.0.0", description="监听地址")
     APP_PORT: int = Field(default=8000, description="监听端口")
     CORS_ORIGINS: str = Field(
-        default="http://localhost:3000,http://localhost:5173",
-        description="允许的跨域来源（逗号分隔）"
+        default="http://localhost:3000,http://localhost:5173", description="允许的跨域来源（逗号分隔）"
     )
 
     @property

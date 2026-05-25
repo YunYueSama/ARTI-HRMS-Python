@@ -15,7 +15,6 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
 
 from app.core.database import get_mysql_session
 from app.core.dependencies import TokenPayload, require_permission
@@ -29,9 +28,9 @@ class ApprovalRuleTypeCreate(BaseModel):
     """审批规则类型创建请求"""
 
     type_code: str = Field(min_length=1, description="类型编码")
-    type_name: Optional[str] = Field(default=None, description="类型名称")
-    type_desc: Optional[str] = Field(default=None, description="类型描述")
-    status: Optional[str] = Field(default="active", description="状态")
+    type_name: str | None = Field(default=None, description="类型名称")
+    type_desc: str | None = Field(default=None, description="类型描述")
+    status: str | None = Field(default="active", description="状态")
 
 
 @router.get("/all", summary="获取所有审批规则类型")

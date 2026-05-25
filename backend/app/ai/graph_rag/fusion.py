@@ -39,7 +39,6 @@ Java 对应关系：
 """
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +94,7 @@ def fusion_search(
             source = result.get("source", "未知来源")
 
             if content:
-                context_parts.append(
-                    f"[{i}] (相关度: {score:.2f}, 来源: {source})"
-                )
+                context_parts.append(f"[{i}] (相关度: {score:.2f}, 来源: {source})")
                 context_parts.append(content)
                 context_parts.append("")  # 空行分隔
 
@@ -119,9 +116,7 @@ def fusion_search(
             label = result.get("label", relation)
             hops = result.get("hops", 0)
 
-            context_parts.append(
-                f"  {source_name} --[{label}]--> {target_name} (跳数: {hops})"
-            )
+            context_parts.append(f"  {source_name} --[{label}]--> {target_name} (跳数: {hops})")
 
         context_parts.append("")  # 结尾空行
 

@@ -13,8 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_mysql_session
 from app.core.dependencies import TokenPayload, get_current_user
-from app.schemas.common import ApiResponse, ok
-from app.schemas.permission import ReportSummary
+from app.schemas.common import ok
 from app.services import report_service
 
 router = APIRouter()

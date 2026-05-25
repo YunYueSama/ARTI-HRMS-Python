@@ -35,14 +35,12 @@ FastAPI Depends vs Spring @Autowired 对比：
         ...
 """
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-from typing import Optional
 
+from app.core.exceptions import PermissionDeniedException, UnauthorizedException
 from app.core.security import decode_access_token
-from app.core.exceptions import UnauthorizedException, PermissionDeniedException
-
 
 # ============================================================
 # HTTP Bearer Token 提取器
@@ -67,14 +65,15 @@ class TokenPayload(BaseModel):
         role_id: 角色 ID（关联 role 表）
         permissions: 用户拥有的权限码列表（从 role_permission 表查询）
     """
+
     user_id: int = Field(description="用户 ID")
     username: str = Field(description="用户名")
-    role_id: Optional[int] = Field(default=None, description="角色 ID")
+    role_id: int | None = Field(default=None, description="角色 ID")
     permissions: list[str] = Field(default_factory=list, description="权限码列表")
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
 ) -> TokenPayload:
     """
     获取当前登录用户信息（核心认证依赖）

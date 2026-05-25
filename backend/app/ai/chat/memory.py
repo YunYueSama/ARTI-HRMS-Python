@@ -20,7 +20,7 @@ import logging
 from datetime import datetime
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ai_chat import AiChatMessage
@@ -142,6 +142,4 @@ class DatabaseChatMemory:
 
         # 注意：不在这里 commit，由外层的数据库会话管理器统一提交
         await self.db.flush()
-        logger.debug(
-            f"保存对话记录 (user_id={self.user_id}, provider={provider_name}, model={model_name})"
-        )
+        logger.debug(f"保存对话记录 (user_id={self.user_id}, provider={provider_name}, model={model_name})")

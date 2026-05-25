@@ -8,7 +8,6 @@
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -24,8 +23,8 @@ class IdentityTag(Base):
     # 标签编码（主键，字符串类型）
     tag_code: Mapped[str] = mapped_column(String(50), primary_key=True)
     # 标签名称
-    tag_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    tag_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # 标签描述
-    tag_desc: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    tag_desc: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

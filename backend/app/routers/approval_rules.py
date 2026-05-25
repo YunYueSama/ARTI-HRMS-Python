@@ -13,7 +13,6 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -32,27 +31,27 @@ router = APIRouter()
 class ApprovalRuleCreate(BaseModel):
     """审批规则创建请求"""
 
-    type_code: Optional[str] = Field(default=None, description="审批类型编码")
-    applicant_tag: Optional[str] = Field(default=None, description="申请人身份标签")
-    days_op: Optional[str] = Field(default=None, description="天数比较运算符")
-    days_value: Optional[Decimal] = Field(default=None, description="天数阈值")
-    first_approver_tag: Optional[str] = Field(default=None, description="第一级审批人标签")
-    second_approver_tag: Optional[str] = Field(default=None, description="第二级审批人标签")
-    second_approver_scope: Optional[str] = Field(default=None, description="第二级审批人范围")
-    sort_order: Optional[int] = Field(default=None, description="排序序号")
+    type_code: str | None = Field(default=None, description="审批类型编码")
+    applicant_tag: str | None = Field(default=None, description="申请人身份标签")
+    days_op: str | None = Field(default=None, description="天数比较运算符")
+    days_value: Decimal | None = Field(default=None, description="天数阈值")
+    first_approver_tag: str | None = Field(default=None, description="第一级审批人标签")
+    second_approver_tag: str | None = Field(default=None, description="第二级审批人标签")
+    second_approver_scope: str | None = Field(default=None, description="第二级审批人范围")
+    sort_order: int | None = Field(default=None, description="排序序号")
 
 
 class ApprovalRuleUpdate(BaseModel):
     """审批规则更新请求"""
 
-    type_code: Optional[str] = Field(default=None, description="审批类型编码")
-    applicant_tag: Optional[str] = Field(default=None, description="申请人身份标签")
-    days_op: Optional[str] = Field(default=None, description="天数比较运算符")
-    days_value: Optional[Decimal] = Field(default=None, description="天数阈值")
-    first_approver_tag: Optional[str] = Field(default=None, description="第一级审批人标签")
-    second_approver_tag: Optional[str] = Field(default=None, description="第二级审批人标签")
-    second_approver_scope: Optional[str] = Field(default=None, description="第二级审批人范围")
-    sort_order: Optional[int] = Field(default=None, description="排序序号")
+    type_code: str | None = Field(default=None, description="审批类型编码")
+    applicant_tag: str | None = Field(default=None, description="申请人身份标签")
+    days_op: str | None = Field(default=None, description="天数比较运算符")
+    days_value: Decimal | None = Field(default=None, description="天数阈值")
+    first_approver_tag: str | None = Field(default=None, description="第一级审批人标签")
+    second_approver_tag: str | None = Field(default=None, description="第二级审批人标签")
+    second_approver_scope: str | None = Field(default=None, description="第二级审批人范围")
+    sort_order: int | None = Field(default=None, description="排序序号")
 
 
 def _rule_to_dict(rule: ApprovalRule) -> dict:
@@ -76,7 +75,7 @@ def _rule_to_dict(rule: ApprovalRule) -> dict:
 async def list_approval_rules(
     page: int = Query(default=1, ge=1, description="页码"),
     size: int = Query(default=10, ge=1, le=500, description="每页大小"),
-    type_code: Optional[str] = Query(default=None, description="审批类型编码筛选"),
+    type_code: str | None = Query(default=None, description="审批类型编码筛选"),
     current_user: TokenPayload = Depends(require_permission("permission:approval-rule:view")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
@@ -137,9 +136,7 @@ async def update_approval_rule(
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
     """更新审批规则"""
-    result = await db.execute(
-        select(ApprovalRule).where(ApprovalRule.rule_id == rule_id)
-    )
+    result = await db.execute(select(ApprovalRule).where(ApprovalRule.rule_id == rule_id))
     rule = result.scalar_one_or_none()
     if not rule:
         raise NotFoundException(message="审批规则不存在", detail=f"rule_id={rule_id}")
@@ -161,9 +158,7 @@ async def delete_approval_rule(
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
     """删除审批规则"""
-    result = await db.execute(
-        select(ApprovalRule).where(ApprovalRule.rule_id == rule_id)
-    )
+    result = await db.execute(select(ApprovalRule).where(ApprovalRule.rule_id == rule_id))
     rule = result.scalar_one_or_none()
     if not rule:
         raise NotFoundException(message="审批规则不存在", detail=f"rule_id={rule_id}")

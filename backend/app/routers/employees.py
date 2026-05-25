@@ -24,7 +24,6 @@ from app.schemas.employee import (
     EmployeeResponse,
     EmployeeUpdate,
 )
-from app.schemas.common import PageResponse
 from app.services import employee_service
 
 router = APIRouter()

@@ -6,7 +6,6 @@
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -22,10 +21,10 @@ class Role(Base):
     # 角色ID（主键，自增）
     role_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 角色名称
-    role_name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    role_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 角色编码（唯一标识）
-    role_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    role_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 角色描述
-    role_desc: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    role_desc: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # 创建时间
-    create_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    create_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

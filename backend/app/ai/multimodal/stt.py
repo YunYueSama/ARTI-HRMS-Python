@@ -35,14 +35,12 @@ logger = logging.getLogger(__name__)
 # ============================================================
 try:
     import whisper
+
     WHISPER_AVAILABLE = True
     logger.info("Whisper 模型已加载")
 except ImportError:
     WHISPER_AVAILABLE = False
-    logger.warning(
-        "openai-whisper 未安装，语音转文字将使用占位实现。"
-        "安装方式: pip install openai-whisper"
-    )
+    logger.warning("openai-whisper 未安装，语音转文字将使用占位实现。" "安装方式: pip install openai-whisper")
 
 # 支持的音频格式
 SUPPORTED_AUDIO_FORMATS = {".wav", ".mp3", ".webm", ".m4a", ".ogg", ".flac"}
@@ -96,10 +94,7 @@ async def transcribe_audio(file_path: str) -> dict:
     # 验证文件格式
     suffix = Path(file_path).suffix.lower()
     if suffix not in SUPPORTED_AUDIO_FORMATS:
-        raise ValueError(
-            f"不支持的音频格式: {suffix}，"
-            f"支持的格式: {', '.join(SUPPORTED_AUDIO_FORMATS)}"
-        )
+        raise ValueError(f"不支持的音频格式: {suffix}，" f"支持的格式: {', '.join(SUPPORTED_AUDIO_FORMATS)}")
 
     # 如果 Whisper 不可用，返回占位响应
     if not WHISPER_AVAILABLE:
