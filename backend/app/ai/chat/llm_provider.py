@@ -106,6 +106,9 @@ def get_fallback_model() -> BaseChatModel | None:
     if _is_placeholder_key(config.api_key) and config.provider != "ollama":
         logger.warning("备用 LLM API Key 未配置，跳过备用模型初始化")
         return None
+    if not config.base_url or not config.model:
+        logger.warning("备用 LLM base_url 或 model 未配置，跳过备用模型初始化")
+        return None
     return get_chat_model(config)
 
 
