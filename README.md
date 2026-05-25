@@ -8,7 +8,7 @@
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat&logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)
 
-基于 **FastAPI + SQLAlchemy + LangChain + LangGraph** 的企业级人力资源管理系统后端，内置 AI 聊天助手「亚托莉（Atri）」。
+基于 **FastAPI + SQLAlchemy + LangChain + LangGraph** 的企业级人力资源管理系统后端，内置 AI 聊天助手「亚托莉（Atri）」，配合 [前端项目](https://github.com/YunYueSama/ARTI-HRMS-WEB) 使用。
 
 ## 技术栈
 
