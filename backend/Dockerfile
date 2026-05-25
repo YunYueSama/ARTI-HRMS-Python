@@ -17,9 +17,9 @@ WORKDIR /app
 # 先复制依赖文件，利用 Docker 缓存层
 COPY pyproject.toml ./
 
-# 安装项目依赖
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir .
+# 安装项目依赖（setuptools<70 保留 pkg_resources，openai-whisper 构建需要）
+RUN pip install --no-cache-dir --upgrade pip "setuptools<70" wheel \
+    && pip install --no-cache-dir --no-build-isolation .
 
 # 复制应用代码
 COPY . /app
