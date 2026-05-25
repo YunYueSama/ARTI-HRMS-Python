@@ -201,7 +201,7 @@ backend/
 
 ## 相关文档
 
-- [项目根 README](../README.md) — 项目总览
+- [项目根 README] — 项目总览
 
 - `scripts/init_postgres.sql` — 完整数据库 DDL + 种子数据
 
