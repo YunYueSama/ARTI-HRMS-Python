@@ -45,6 +45,7 @@ from app.routers.multimodal import router as multimodal_router
 from app.routers.nlp import router as nlp_router
 from app.routers.observability import router as observability_router
 from app.routers.permissions import router as permission_router
+from app.routers.persona import router as persona_router
 from app.routers.rag import router as rag_router
 from app.routers.reports import router as report_router
 from app.routers.role_permissions import router as role_permission_router
@@ -257,6 +258,7 @@ app.include_router(observability_router, prefix="/api/traces", tags=["可观测�
 
 # --- 配置模块 ---
 app.include_router(config_router, prefix="/api/config", tags=["模型配置"])
+app.include_router(persona_router, prefix="/api/ai", tags=["人设配置"])
 
 # --- NLP 模块 ---
 app.include_router(nlp_router, prefix="/api/nlp", tags=["NLP 文本分析"])

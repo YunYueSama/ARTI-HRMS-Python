@@ -40,7 +40,7 @@ from app.ai.chat.llm_provider import (
     get_primary_model,
 )
 from app.ai.chat.memory import DatabaseChatMemory
-from app.ai.chat.prompts import build_system_prompt, get_few_shot_examples
+from app.ai.chat.prompts import build_system_prompt, get_active_persona, get_few_shot_examples
 from app.ai.knowledge.service import query_knowledge
 from app.core.config import get_runtime_overrides, settings
 from app.schemas.agent import MessageCategory
@@ -128,20 +128,21 @@ class ChatService:
         category = await classify_message(message, self._primary_model)
         logger.info(f"消息分类: {category.value} (user_id={user_id})")
 
-        # Step 2: 知识查询（数据查询类或包含数据关键词时触发）
+        # Step 2: 混合检索（关键词 + 增强向量 + 知识图谱，并行执行，RRF 融合）
         knowledge_context = ""
         if category == MessageCategory.SYSTEM_DATA_QUERY:
-            try:
-                knowledge_context = await query_knowledge(message, user_id, db)
-            except Exception as e:
-                logger.warning(f"知识查询失败: {e}")
+            knowledge_context = await _hybrid_retrieve(message, user_id, db)
+            logger.info(f"知识注入结果: 长度={len(knowledge_context)}, 预览={knowledge_context[:200] if knowledge_context else '(空)'}")
 
         # Step 3: 加载对话历史
+        # 回滚以清除可能的失败事务状态（前面的并行检索可能已损坏会话）
+        await db.rollback()
         memory = DatabaseChatMemory(user_id=user_id, db=db)
         history_messages = await memory.load_messages(window_size=10)
 
-        # Step 4: 构建系统提示词
-        system_prompt = build_system_prompt(category.value, knowledge_context)
+        # Step 4: 加载人设并构建系统提示词
+        persona_text = await get_active_persona(db)
+        system_prompt = build_system_prompt(category.value, knowledge_context, persona_text)
         few_shot = get_few_shot_examples(category.value)
 
         # Step 5: 尝试流式调用（主模型 → 备用模型 → 降级回复）
@@ -227,20 +228,20 @@ class ChatService:
         # 分类
         category = await classify_message(message, self._primary_model)
 
-        # 知识查询
+        # 混合检索
         knowledge_context = ""
         if category == MessageCategory.SYSTEM_DATA_QUERY:
-            try:
-                knowledge_context = await query_knowledge(message, user_id, db)
-            except Exception as e:
-                logger.warning(f"知识查询失败: {e}")
+            knowledge_context = await _hybrid_retrieve(message, user_id, db)
 
-        # 加载历史
+        # 加载对话历史
+        # 回滚以清除可能的失败事务状态（前面的并行检索可能已损坏会话）
+        await db.rollback()
         memory = DatabaseChatMemory(user_id=user_id, db=db)
         history_messages = await memory.load_messages(window_size=10)
 
-        # 构建提示词
-        system_prompt = build_system_prompt(category.value, knowledge_context)
+        # 加载人设并构建提示词
+        persona_text = await get_active_persona(db)
+        system_prompt = build_system_prompt(category.value, knowledge_context, persona_text)
         few_shot = get_few_shot_examples(category.value)
 
         # 构建消息列表
@@ -452,3 +453,145 @@ class ChatService:
         parts.append("如果你愿意，可以把问题再问得更具体一点。请交给我吧，我会继续认真回答你。")
 
         return "\n".join(parts)
+
+
+# ============================================================
+# 混合检索编排（模块级函数）
+# ============================================================
+
+import asyncio
+
+
+async def _hybrid_retrieve(message: str, user_id: int, db: AsyncSession) -> str:
+    """
+    混合检索：关键词查询 + 增强向量检索 + 知识图谱，并行执行，RRF 融合
+
+    流程：
+        1. 并行执行三个检索任务：
+           - 关键词查询（query_knowledge）→ 直查 MySQL
+           - 增强向量检索（enhanced_vector_search）→ pgvector + 查询增强
+           - 知识图谱查询（_try_graph_query）→ 实体匹配 → NetworkX
+        2. 使用 RRF 融合三路结果
+        3. 返回融合后的 LLM 上下文文本
+
+    参数：
+        message: 用户消息
+        user_id: 用户 ID
+        db: 数据库会话
+
+    返回：
+        融合后的知识上下文文本（空字符串表示无结果）
+    """
+    from app.ai.chat.query_enhancer import enhanced_vector_search
+    from app.ai.graph_rag.fusion import fusion_search_rrf
+
+    try:
+        # 并行执行三个检索任务
+        keyword_task = query_knowledge(message, user_id, db)
+        vector_task = enhanced_vector_search(message, db)
+        graph_task = _try_graph_query(message)
+
+        results = await asyncio.gather(
+            keyword_task, vector_task, graph_task,
+            return_exceptions=True,
+        )
+
+        # 如果任何一路检索抛出异常，回滚事务以恢复会话状态
+        # 否则后续操作（如 load_messages）会在失败的事务上崩溃
+        if any(isinstance(r, BaseException) for r in results):
+            await db.rollback()
+            for r in results:
+                if isinstance(r, BaseException):
+                    logger.warning(f"混合检索子任务异常: {r}")
+
+        keyword_ctx = results[0] if isinstance(results[0], str) else ""
+        vector_results = results[1] if isinstance(results[1], list) else []
+        graph_results = results[2] if isinstance(results[2], list) else []
+
+        # 调试日志：显示各路检索结果
+        top_score = max((r.get("score", 0) for r in vector_results), default=0)
+        logger.info(
+            f"混合检索结果: keyword={'有' if keyword_ctx else '无'}, "
+            f"vector={len(vector_results)}条(最高分={top_score:.3f}), "
+            f"graph={len(graph_results)}条"
+        )
+
+        if not keyword_ctx and not vector_results and not graph_results:
+            # 所有检索都无结果，回退到关键词查询
+            logger.info("混合检索三路均无结果，回退到关键词查询")
+            return await query_knowledge(message, user_id, db)
+
+        # RRF 融合
+        return fusion_search_rrf(
+            keyword_context=keyword_ctx,
+            vector_results=vector_results,
+            graph_results=graph_results,
+        )
+    except Exception as e:
+        logger.warning(f"混合检索失败，回退到关键词查询: {e}")
+        await db.rollback()
+        try:
+            return await query_knowledge(message, user_id, db)
+        except Exception:
+            return ""
+
+
+async def _try_graph_query(message: str) -> list[dict]:
+    """
+    尝试从消息中提取实体名称并查询知识图谱
+
+    策略：遍历知识图谱中的节点名，检查是否出现在用户消息中。
+         命中则调用 query_relationships 查询关联关系。
+         未命中则返回空列表（不影响其他检索）。
+
+    参数：
+        message: 用户消息
+
+    返回：
+        图谱查询结果列表
+    """
+    entity_name = _extract_entity_name(message)
+    if not entity_name:
+        return []
+
+    try:
+        from app.ai.graph_rag.knowledge_graph import hr_knowledge_graph
+        return hr_knowledge_graph.query_relationships(entity_name, max_hops=2)
+    except Exception as e:
+        logger.debug(f"知识图谱查询失败: {e}")
+        return []
+
+
+def _extract_entity_name(message: str) -> str | None:
+    """
+    从消息中提取实体名称（基于知识图谱节点匹配）
+
+    遍历知识图谱的所有节点名，检查是否出现在消息文本中。
+    优先返回最长的匹配名称（更具体的实体）。
+
+    参数：
+        message: 用户消息
+
+    返回：
+        匹配到的实体名称，未匹配返回 None
+    """
+    try:
+        from app.ai.graph_rag.knowledge_graph import hr_knowledge_graph
+        graph = hr_knowledge_graph.graph
+        if not graph or graph.number_of_nodes() == 0:
+            return None
+
+        best_match = None
+        best_len = 0
+        for _node_id, attrs in graph.nodes(data=True):
+            name = attrs.get("name", "")
+            if name and len(name) >= 2 and name in message and len(name) > best_len:
+                best_match = name
+                best_len = len(name)
+
+        if best_match:
+            logger.debug(f"图谱实体提取: '{best_match}' from '{message[:30]}...'")
+
+        return best_match
+    except Exception:
+        return None

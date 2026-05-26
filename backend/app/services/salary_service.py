@@ -11,6 +11,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
+from app.models.employee import Employee
 from app.models.salary import SalaryConfig, SalaryRecord
 from app.schemas.common import PageResponse
 from app.schemas.salary import (
@@ -124,17 +125,38 @@ async def delete_salary_config(config_id: int, db: AsyncSession) -> None:
 # ============================================================
 
 
-async def list_salary_records(query: SalaryRecordQuery, db: AsyncSession) -> PageResponse[SalaryRecordResponse]:
+async def list_salary_records(
+    query: SalaryRecordQuery,
+    db: AsyncSession,
+    scope: str = "company",
+    user_emp_id: int | None = None,
+    user_dept_id: int | None = None,
+) -> PageResponse[SalaryRecordResponse]:
     """
-    分页查询薪资记录
+    分页查询薪资记录（按数据范围过滤）
 
     支持筛选条件：
         - emp_id: 员工ID精确匹配
         - status: 审批状态精确匹配
         - month_start / month_end: 薪资月份范围
+
+    数据范围过滤：
+        - self: 只能查看自己的薪资记录
+        - dept: 可以查看本部门所有人的薪资记录
+        - company: 可以查看所有薪资记录
     """
     stmt = select(SalaryRecord)
     count_stmt = select(func.count()).select_from(SalaryRecord)
+
+    # 数据范围过滤
+    if scope == "self" and user_emp_id is not None:
+        stmt = stmt.where(SalaryRecord.emp_id == user_emp_id)
+        count_stmt = count_stmt.where(SalaryRecord.emp_id == user_emp_id)
+    elif scope == "dept" and user_dept_id is not None:
+        # JOIN 员工表按部门过滤
+        stmt = stmt.join(Employee, SalaryRecord.emp_id == Employee.emp_id).where(Employee.dept_id == user_dept_id)
+        count_stmt = count_stmt.join(Employee, SalaryRecord.emp_id == Employee.emp_id).where(Employee.dept_id == user_dept_id)
+    # scope == "company" 不加额外过滤，查看所有数据
 
     if query.emp_id is not None:
         stmt = stmt.where(SalaryRecord.emp_id == query.emp_id)

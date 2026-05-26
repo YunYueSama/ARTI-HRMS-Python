@@ -30,7 +30,7 @@ async def list_salary_configs(
     size: int = Query(default=10, ge=1, le=500, description="每页大小"),
     keyword: str | None = Query(default=None, description="搜索关键词"),
     status: str | None = Query(default=None, description="状态筛选"),
-    current_user: TokenPayload = Depends(require_permission("salary:record:view")),
+    current_user: TokenPayload = Depends(require_permission("salary:config:view")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse[PageResponse[SalaryConfigResponse]]:
     """分页查询薪资配置，支持关键词和状态筛选"""
@@ -41,7 +41,7 @@ async def list_salary_configs(
 @router.get("/{config_id}", summary="获取薪资配置详情")
 async def get_salary_config(
     config_id: int,
-    current_user: TokenPayload = Depends(require_permission("salary:record:view")),
+    current_user: TokenPayload = Depends(require_permission("salary:config:view")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse[SalaryConfigResponse]:
     """根据ID获取薪资配置详情"""
@@ -52,7 +52,7 @@ async def get_salary_config(
 @router.post("", summary="创建薪资配置")
 async def create_salary_config(
     data: SalaryConfigCreate,
-    current_user: TokenPayload = Depends(require_permission("salary:record:add")),
+    current_user: TokenPayload = Depends(require_permission("salary:config:add")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse[SalaryConfigResponse]:
     """创建薪资配置"""
@@ -64,7 +64,7 @@ async def create_salary_config(
 async def update_salary_config(
     config_id: int,
     data: SalaryConfigUpdate,
-    current_user: TokenPayload = Depends(require_permission("salary:record:edit")),
+    current_user: TokenPayload = Depends(require_permission("salary:config:edit")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse[SalaryConfigResponse]:
     """更新薪资配置"""
@@ -75,7 +75,7 @@ async def update_salary_config(
 @router.delete("/{config_id}", summary="删除薪资配置")
 async def delete_salary_config(
     config_id: int,
-    current_user: TokenPayload = Depends(require_permission("salary:record:view")),
+    current_user: TokenPayload = Depends(require_permission("salary:config:delete")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse[None]:
     """删除薪资配置"""

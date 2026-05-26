@@ -34,7 +34,7 @@ from app.ai.rag.pipeline import generate_embeddings
 logger = logging.getLogger(__name__)
 
 # 默认相似度阈值（低于此值的结果将被过滤）
-DEFAULT_SIMILARITY_THRESHOLD = 0.5
+DEFAULT_SIMILARITY_THRESHOLD = 0.3
 
 
 async def search(
@@ -97,12 +97,12 @@ async def search(
             c.content,
             c.token_count,
             d.filename,
-            1 - (c.embedding <=> :query_vector::vector) AS similarity
+            1 - (c.embedding <=> CAST(:query_vector AS vector)) AS similarity
         FROM rag_chunk c
         JOIN rag_document d ON c.doc_id = d.doc_id
         WHERE d.status = 'ready'
           AND c.embedding IS NOT NULL
-        ORDER BY c.embedding <=> :query_vector::vector ASC
+        ORDER BY c.embedding <=> CAST(:query_vector AS vector) ASC
         LIMIT :top_k
     """)
 
@@ -176,17 +176,18 @@ async def get_rag_context(
     if not results:
         return ""
 
-    # 格式化上下文
-    context_parts = ["以下是从知识库中检索到的相关信息：\n"]
+    # 格式化上下文 — 每个分块用明确分隔线隔开，避免 LLM 误认为连续文本
+    context_parts = ["以下是从知识库中检索到的独立文本片段（每个片段来自文档的不同位置，不是连续内容）：\n"]
 
     for i, result in enumerate(results, 1):
         header = (
-            f"[来源: {result.get('filename', '未知')}, "
+            f"--- 片段 {i} [来源: {result.get('filename', '未知')}, "
             f"分块 #{result['chunk_index']}, "
-            f"相关度: {result['score']:.2f}]"
+            f"相关度: {result['score']:.2f}] ---"
         )
         context_parts.append(f"{header}\n{result['content']}")
 
+    context_parts.append("--- 以上为独立片段，请分别引用，不要合并为连续段落 ---")
     return "\n\n".join(context_parts)
 
 

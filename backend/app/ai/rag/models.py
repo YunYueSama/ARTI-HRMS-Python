@@ -24,7 +24,7 @@ RAG 数据模型和 pgvector 连接（ai/rag/models.py）
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config import settings
@@ -69,7 +69,7 @@ class RagDocument(PgVectorBase):
     upload_time: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        server_default=func.now(),
+        default=datetime.now,
         comment="上传时间",
     )
     processed_time: Mapped[datetime | None] = mapped_column(
@@ -130,7 +130,7 @@ class RagChunk(PgVectorBase):
     create_time: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        server_default=func.now(),
+        default=datetime.now,
         comment="创建时间",
     )
 

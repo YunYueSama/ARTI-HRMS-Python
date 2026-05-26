@@ -28,7 +28,7 @@ Java 对应关系：
     - 所有查询均为只读操作，不修改任何数据
     - 基于关键词匹配触发查询（与 Java 版逻辑一致）
     - 查询结果限制条数，避免上下文过长
-    - 权限敏感数据暂不做权限校验（简化版本）
+    - 基于用户权限过滤数据域：AI 不返回超过当前用户权限范围的数据
 """
 
 import logging
@@ -42,7 +42,9 @@ from app.models.department import Department
 from app.models.employee import Employee
 from app.models.job_position import JobPosition
 from app.models.leave_request import LeaveRequest
+from app.models.permission import Permission
 from app.models.role import Role
+from app.models.role_permission import RolePermission
 from app.models.salary import SalaryConfig, SalaryRecord
 from app.models.sys_user import SysUser
 
@@ -72,45 +74,74 @@ async def query_knowledge(
     normalized = message.strip().lower().replace(" ", "")
     context_parts: list[str] = []
 
-    # 按业务域逐一检测并查询
+    # 查询用户权限，用于数据域过滤
+    perms = await _get_user_permission_codes(user_id, db)
+
+    # 按业务域逐一检测并查询（仅在用户有对应权限时执行）
     if _contains_any(normalized, ["公司", "系统", "概况", "总览", "整体", "全部", "所有"]):
-        await _append_system_overview(context_parts, db)
+        if "dashboard:view" in perms:
+            await _append_system_overview(context_parts, db)
 
     if _contains_any(normalized, ["我", "我的", "当前用户", "当前账号", "个人"]):
         await _append_current_user(context_parts, user_id, db)
 
     if _contains_any(normalized, ["员工", "人员", "入职", "在职", "离职"]):
-        await _append_employee_context(context_parts, db)
+        if "base:employee:view" in perms:
+            await _append_employee_context(context_parts, db)
 
     if _contains_any(normalized, ["部门"]):
-        await _append_department_context(context_parts, db)
+        if "base:department:view" in perms:
+            await _append_department_context(context_parts, db)
 
     if _contains_any(normalized, ["岗位", "职位"]):
-        await _append_position_context(context_parts, db)
+        if "base:position:view" in perms:
+            await _append_position_context(context_parts, db)
 
     if _contains_any(normalized, ["用户", "账号", "登录"]):
-        await _append_user_context(context_parts, db)
+        if "permission:user:view" in perms:
+            await _append_user_context(context_parts, db)
 
     if _contains_any(normalized, ["角色", "权限", "授权"]):
-        await _append_role_permission_context(context_parts, db)
+        if "permission:role:view" in perms:
+            await _append_role_permission_context(context_parts, db)
 
     if _contains_any(normalized, ["考勤", "出勤", "打卡", "签到", "签退"]):
-        await _append_attendance_context(context_parts, user_id, db)
+        if "attendance:record:view" in perms:
+            await _append_attendance_context(context_parts, user_id, db)
 
     if _contains_any(normalized, ["请假", "休假", "假期"]):
-        await _append_leave_context(context_parts, user_id, db)
+        if "attendance:leave:view" in perms:
+            await _append_leave_context(context_parts, user_id, db)
 
-    if _contains_any(normalized, ["工资", "薪资", "薪酬", "发薪"]):
-        await _append_salary_context(context_parts, user_id, db)
+    is_salary_config_query = _contains_any(normalized, ["配置", "设置", "规则", "标准", "方案"]) and _contains_any(
+        normalized, ["工资", "薪资", "薪酬", "发薪"]
+    )
+
+    if is_salary_config_query:
+        if "salary:config:view" in perms:
+            await _append_salary_config_context(context_parts, db)
+        else:
+            context_parts.append(
+                "薪资配置权限说明：当前用户没有查看薪资配置的权限（缺少 salary:config:view 权限码）。"
+                "请直接告知用户：您没有权限查看薪资配置的详细信息，请联系管理员开通 salary:config:view 权限。"
+                "不要引用系统总览中的薪资记录数量来回答薪资配置问题。"
+            )
+
+    if _contains_any(normalized, ["工资", "薪资", "薪酬", "发薪"]) and not is_salary_config_query:
+        if "salary:record:view" in perms:
+            await _append_salary_context(context_parts, user_id, db)
+        else:
+            context_parts.append("当前用户没有薪资记录的查看权限（缺少 salary:record:view）。")
 
     if _contains_any(normalized, ["报表", "统计", "指标", "分布", "出勤率"]):
-        await _append_report_context(context_parts, db)
+        if "report:view" in perms:
+            await _append_report_context(context_parts, db)
 
-    # 天气查询：当用户问到天气时，调用高德地图 API 获取实时天气
+    # 天气查询：当用户问到天气时，调用高德地图 API 获取实时天气（无需权限）
     if _contains_any(normalized, ["天气", "气温", "下雨", "下雪", "晴", "阴天", "weather"]):
         await _append_weather_context(context_parts, message)
 
-    # 元信息：当主人问到 AI 自身使用的模型 / 技术架构时，把真实配置注入上下文
+    # 元信息：当主人问到 AI 自身使用的模型 / 技术架构时，把真实配置注入上下文（无需权限）
     if _contains_any(
         normalized,
         [
@@ -333,6 +364,28 @@ async def _append_salary_context(parts: list[str], user_id: int, db: AsyncSessio
             )
 
 
+async def _append_salary_config_context(parts: list[str], db: AsyncSession) -> None:
+    """查询薪资配置详情"""
+    total = await _count(db, SalaryConfig)
+
+    stmt = select(SalaryConfig).order_by(SalaryConfig.config_id).limit(20)
+    result = await db.execute(stmt)
+    configs = result.scalars().all()
+
+    if configs:
+        texts = []
+        for c in configs:
+            texts.append(
+                f"配置名称={c.config_name or '未知'}，"
+                f"配置键={c.config_key or '未知'}，"
+                f"配置值={c.config_value or '未知'}，"
+                f"状态={c.status or '未知'}"
+            )
+        parts.append(f"薪资配置数据：当前系统共有 {total} 条薪资配置。\n" + "\n".join(texts))
+    else:
+        parts.append("薪资配置数据：当前系统暂无薪资配置。")
+
+
 async def _append_report_context(parts: list[str], db: AsyncSession) -> None:
     """查询报表统计数据"""
     emp_count = await _count(db, Employee)
@@ -358,7 +411,7 @@ async def _append_weather_context(parts: list[str], message: str) -> None:
     查询天气数据（调用高德地图 API）
 
     说明：从用户消息中提取城市名，调用 weather_service 获取实时天气。
-         如果无法识别城市名，默认查询"绵阳"（用户所在城市）。
+         如果无法识别城市名，默认查询配置的城市（.env 中 WEATHER_DEFAULT_CITY）。
     """
     import re
 
@@ -382,9 +435,10 @@ async def _append_weather_context(parts: list[str], message: str) -> None:
                 city_name = candidate
                 break
 
-    # 默认城市
+    # 默认城市（从配置读取）
     if not city_name:
-        city_name = "绵阳"
+        from app.core.config import settings
+        city_name = settings.WEATHER_DEFAULT_CITY
 
     # 调用天气服务
     try:
@@ -467,6 +521,49 @@ def _append_self_meta(parts: list[str]) -> None:
 # ============================================================
 # 辅助函数
 # ============================================================
+
+
+async def _get_user_permission_codes(user_id: int, db: AsyncSession) -> set[str]:
+    """
+    查询用户角色对应的所有权限编码
+
+    说明：通过 sys_user → role → role_permission → permission 链路查询。
+         管理员（ADMIN）和总经理（GENERAL_MANAGER）角色自动拥有全部权限。
+
+    参数：
+        user_id: 用户 ID
+        db: 异步数据库会话
+
+    返回：
+        权限编码集合（如 {"dashboard:view", "salary:record:view", ...}）
+    """
+    # 查询用户角色
+    stmt = select(SysUser.role_id).where(SysUser.user_id == user_id)
+    result = await db.execute(stmt)
+    role_id = result.scalar_one_or_none()
+
+    if role_id is None:
+        return set()
+
+    # 查询角色编码
+    stmt = select(Role.role_code).where(Role.role_id == role_id)
+    result = await db.execute(stmt)
+    role_code = result.scalar_one_or_none()
+
+    # 管理员和总经理拥有全部权限
+    if role_code in ("ADMIN", "GENERAL_MANAGER"):
+        stmt = select(Permission.perm_code)
+        result = await db.execute(stmt)
+        return set(result.scalars().all())
+
+    # 查询角色关联的权限编码
+    stmt = (
+        select(Permission.perm_code)
+        .join(RolePermission, RolePermission.perm_id == Permission.perm_id)
+        .where(RolePermission.role_id == role_id)
+    )
+    result = await db.execute(stmt)
+    return set(result.scalars().all())
 
 
 async def _count(db: AsyncSession, model) -> int:

@@ -172,3 +172,153 @@ def build_graph_context_summary(graph_results: list[dict]) -> str:
             summary_parts.append(f"    ...（共 {len(pairs)} 条）")
 
     return "\n".join(summary_parts)
+
+
+# ============================================================
+# RRF（Reciprocal Rank Fusion）融合
+# ============================================================
+
+def reciprocal_rank_fusion(
+    ranked_lists: list[list[dict]],
+    k: int = 60,
+    top_n: int = 10,
+) -> list[dict]:
+    """
+    Reciprocal Rank Fusion（RRF）排名融合算法
+
+    公式：RRF_score(d) = Σ_i 1 / (k + rank_i(d))
+
+    说明：
+        - d 是一个文档/结果
+        - rank_i(d) 是文档 d 在第 i 个排名列表中的排名（从 1 开始）
+        - k 是常数（默认 60），用于降低高排名结果的权重差异
+        - 如果文档不在某个列表中，该列表贡献为 0
+
+    参数：
+        ranked_lists: 多个已排序的结果列表。
+            每个列表的元素必须有 _rrf_id 字段用于去重标识。
+        k: RRF 常数，默认 60
+        top_n: 返回的最终结果数量
+
+    返回：
+        按 RRF 分数降序排列的融合结果列表
+    """
+    rrf_scores: dict[str, float] = {}
+    doc_lookup: dict[str, dict] = {}
+
+    for ranked_list in ranked_lists:
+        for rank, item in enumerate(ranked_list, start=1):
+            doc_id = item.get("_rrf_id", f"{item.get('doc_id', '?')}:{item.get('chunk_index', '?')}")
+            if doc_id not in rrf_scores:
+                rrf_scores[doc_id] = 0.0
+                doc_lookup[doc_id] = item
+            rrf_scores[doc_id] += 1.0 / (k + rank)
+
+    # 按 RRF 分数降序排列
+    sorted_ids = sorted(rrf_scores.keys(), key=lambda d: rrf_scores[d], reverse=True)
+
+    results = []
+    for doc_id in sorted_ids[:top_n]:
+        item = doc_lookup[doc_id].copy()
+        item["_rrf_score"] = round(rrf_scores[doc_id], 6)
+        results.append(item)
+
+    return results
+
+
+def fusion_search_rrf(
+    keyword_context: str,
+    vector_results: list[dict],
+    graph_results: list[dict],
+    k: int = 60,
+    top_n: int = 10,
+) -> str:
+    """
+    使用 RRF 融合三种检索结果
+
+    说明：将关键词查询、向量检索、知识图谱三种来源的结果，
+         通过 RRF（Reciprocal Rank Fusion）算法融合为统一的排名列表。
+
+    排名列表构建：
+        1. keyword_context：按段落拆分为独立条目，按出现顺序排名
+        2. vector_results：来自 search()，按 score 降序（已排序）
+        3. graph_results：来自 query_relationships()，按 hops 升序（近的优先）
+
+    参数：
+        keyword_context: 关键词查询返回的格式化文本
+        vector_results: 向量检索结果列表 [{"content", "score", "doc_id", ...}]
+        graph_results: 图谱查询结果列表 [{"source_name", "relation", "target_name", "hops", ...}]
+        k: RRF 常数，默认 60
+        top_n: 最终返回的结果数量
+
+    返回：
+        融合后的 LLM 上下文文本
+    """
+    ranked_lists = []
+
+    # 列表 1：关键词查询结果（按段落拆分）
+    if keyword_context and keyword_context.strip():
+        paragraphs = [p.strip() for p in keyword_context.split("\n\n") if p.strip()]
+        # 如果段落太短，按单行拆分
+        if len(paragraphs) <= 1:
+            paragraphs = [line.strip() for line in keyword_context.split("\n") if line.strip() and len(line.strip()) > 10]
+        keyword_items = []
+        for i, para in enumerate(paragraphs):
+            keyword_items.append({
+                "_rrf_id": f"keyword:{i}",
+                "content": para,
+                "source": "系统数据",
+                "score": 1.0,
+            })
+        if keyword_items:
+            ranked_lists.append(keyword_items)
+
+    # 列表 2：向量检索结果（已按 score 降序）
+    if vector_results:
+        for item in vector_results:
+            item["_rrf_id"] = f"vector:{item.get('doc_id', '?')}:{item.get('chunk_index', '?')}"
+        ranked_lists.append(vector_results)
+
+    # 列表 3：图谱结果（按 hops 升序排列）
+    if graph_results:
+        sorted_graph = sorted(graph_results, key=lambda x: x.get("hops", 999))
+        for item in sorted_graph:
+            item["_rrf_id"] = f"graph:{item.get('source_name', '?')}:{item.get('target_name', '?')}"
+            item["content"] = (
+                f"{item.get('source_name', '?')} --[{item.get('label', item.get('relation', '相关'))}]--> "
+                f"{item.get('target_name', '?')}"
+            )
+            item["source"] = "知识图谱"
+            item["score"] = 1.0 / (1 + item.get("hops", 1))
+        ranked_lists.append(sorted_graph)
+
+    if not ranked_lists:
+        return ""
+
+    # 执行 RRF
+    fused = reciprocal_rank_fusion(ranked_lists, k=k, top_n=top_n)
+
+    # 格式化为 LLM 上下文 — 每个结果用分隔线隔开
+    context_parts = ["=== 融合检索结果（以下为独立片段，来自不同位置，请分别引用） ===\n"]
+    for i, item in enumerate(fused, 1):
+        content = item.get("content", "").strip()
+        source = item.get("filename", item.get("source", "未知来源"))
+        rrf_score = item.get("_rrf_score", 0)
+
+        if content:
+            context_parts.append(f"--- 片段 {i} [来源: {source}, RRF: {rrf_score:.4f}] ---")
+            context_parts.append(content)
+            context_parts.append("")
+
+    context_parts.append("=== 检索结束，请逐字引用以上片段，不要合并，不要添加片段中没有的内容 ===")
+    fused_context = "\n".join(context_parts)
+
+    logger.info(
+        f"RRF 融合完成: 关键词={len(ranked_lists[0]) if ranked_lists else 0}条, "
+        f"向量={len(vector_results)}条, "
+        f"图谱={len(graph_results)}条, "
+        f"融合后={len(fused)}条, "
+        f"上下文长度={len(fused_context)}"
+    )
+
+    return fused_context

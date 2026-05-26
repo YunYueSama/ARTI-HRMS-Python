@@ -244,6 +244,7 @@ class Settings(BaseSettings):
     # 用于 AI 助手天气查询功能
     # ========================================
     WEATHER_AMAP_KEY: str = Field(default="your_amap_key_here", description="高德地图 Web 服务 API Key")
+    WEATHER_DEFAULT_CITY: str = Field(default="北京", description="未指定城市时的默认天气查询城市")
 
     # ========================================
     # Whisper 语音识别配置

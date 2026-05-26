@@ -515,16 +515,18 @@ async def _call_embedding_api(texts: list[str]) -> list[list[float]]:
     payload = {
         "model": settings.EMBEDDING_MODEL,
         "input": texts,
-        "dimensions": settings.EMBEDDING_DIMENSIONS,
     }
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(url, json=payload, headers=headers)
+        if response.status_code != 200:
+            logger.error(f"嵌入 API 返回错误: status={response.status_code}, body={response.text[:500]}")
         response.raise_for_status()
 
         data = response.json()
         # OpenAI 格式: {"data": [{"embedding": [...], "index": 0}, ...]}
         embeddings = [item["embedding"] for item in data["data"]]
+        logger.debug(f"嵌入 API 成功: 输入={len(texts)}条, 向量维度={len(embeddings[0]) if embeddings else 0}")
         return embeddings
 
 

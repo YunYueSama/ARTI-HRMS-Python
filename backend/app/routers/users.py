@@ -144,7 +144,7 @@ async def update_user(
 @router.delete("/{user_id}", summary="删除用户")
 async def delete_user(
     user_id: int,
-    current_user: TokenPayload = Depends(require_permission("permission:user:view")),
+    current_user: TokenPayload = Depends(require_permission("permission:user:delete")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse[None]:
     """删除用户"""

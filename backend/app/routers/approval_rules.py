@@ -105,7 +105,7 @@ async def list_approval_rules(
 @router.post("", summary="创建审批规则")
 async def create_approval_rule(
     data: ApprovalRuleCreate,
-    current_user: TokenPayload = Depends(require_permission("permission:approval-rule:view")),
+    current_user: TokenPayload = Depends(require_permission("permission:approval-rule:add")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
     """创建新的审批规则"""
@@ -132,7 +132,7 @@ async def create_approval_rule(
 async def update_approval_rule(
     rule_id: int,
     data: ApprovalRuleUpdate,
-    current_user: TokenPayload = Depends(require_permission("permission:approval-rule:view")),
+    current_user: TokenPayload = Depends(require_permission("permission:approval-rule:edit")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
     """更新审批规则"""
@@ -154,7 +154,7 @@ async def update_approval_rule(
 @router.delete("/{rule_id}", summary="删除审批规则")
 async def delete_approval_rule(
     rule_id: int,
-    current_user: TokenPayload = Depends(require_permission("permission:approval-rule:view")),
+    current_user: TokenPayload = Depends(require_permission("permission:approval-rule:delete")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
     """删除审批规则"""

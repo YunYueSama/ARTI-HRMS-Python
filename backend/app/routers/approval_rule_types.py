@@ -60,7 +60,7 @@ async def list_all_approval_rule_types(
 @router.post("", summary="创建审批规则类型")
 async def create_approval_rule_type(
     data: ApprovalRuleTypeCreate,
-    current_user: TokenPayload = Depends(require_permission("permission:approval-rule:view")),
+    current_user: TokenPayload = Depends(require_permission("permission:approval-rule:add")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
     """创建新的审批规则类型"""

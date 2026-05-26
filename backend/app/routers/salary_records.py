@@ -15,10 +15,14 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_mysql_session
 from app.core.dependencies import TokenPayload, require_permission
+from app.core.permissions import get_data_scope
+from app.models.employee import Employee
+from app.models.sys_user import SysUser
 from app.schemas.common import ApiResponse, PageResponse, ok
 from app.schemas.salary import (
     SalaryRecordCreate,
@@ -42,7 +46,26 @@ async def list_salary_records(
     current_user: TokenPayload = Depends(require_permission("salary:record:view")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse[PageResponse[SalaryRecordResponse]]:
-    """分页查询薪资记录，支持员工、状态和月份范围筛选"""
+    """分页查询薪资记录，支持员工、状态和月份范围筛选（按数据范围过滤）"""
+    # 获取当前用户的身份标签和部门信息
+    identity_tag = None
+    emp_id_for_scope = None
+    dept_id = None
+    user_stmt = select(SysUser).where(SysUser.user_id == current_user.user_id)
+    user_result = await db.execute(user_stmt)
+    sys_user = user_result.scalar_one_or_none()
+    if sys_user and sys_user.emp_id:
+        emp_stmt = select(Employee).where(Employee.emp_id == sys_user.emp_id)
+        emp_result = await db.execute(emp_stmt)
+        emp = emp_result.scalar_one_or_none()
+        if emp:
+            identity_tag = emp.identity_tag_code
+            emp_id_for_scope = emp.emp_id
+            dept_id = emp.dept_id
+
+    # 查询数据范围
+    scope = await get_data_scope(db, role_id=0, module_code="salary:record", identity_tag=identity_tag)
+
     query = SalaryRecordQuery(
         page=page,
         size=size,
@@ -51,7 +74,7 @@ async def list_salary_records(
         month_start=month_start,
         month_end=month_end,
     )
-    result = await salary_service.list_salary_records(query, db)
+    result = await salary_service.list_salary_records(query, db, scope=scope, user_emp_id=emp_id_for_scope, user_dept_id=dept_id)
     return ok(data=result)
 
 

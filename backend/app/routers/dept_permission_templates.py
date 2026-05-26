@@ -59,7 +59,7 @@ async def list_all_dept_permission_templates(
 async def update_dept_modules(
     dept_id: int,
     data: DeptModulesUpdate,
-    current_user: TokenPayload = Depends(require_permission("permission:dept-template:view")),
+    current_user: TokenPayload = Depends(require_permission("permission:dept-template:edit")),
     db: AsyncSession = Depends(get_mysql_session),
 ) -> ApiResponse:
     """
