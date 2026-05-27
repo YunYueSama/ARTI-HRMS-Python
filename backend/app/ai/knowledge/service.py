@@ -546,24 +546,24 @@ async def _get_user_permission_codes(user_id: int, db: AsyncSession) -> set[str]
         return set()
 
     # 查询角色编码
-    stmt = select(Role.role_code).where(Role.role_id == role_id)
-    result = await db.execute(stmt)
-    role_code = result.scalar_one_or_none()
+    stmt_role = select(Role.role_code).where(Role.role_id == role_id)
+    result_role = await db.execute(stmt_role)
+    role_code = result_role.scalar_one_or_none()
 
     # 管理员和总经理拥有全部权限
     if role_code in ("ADMIN", "GENERAL_MANAGER"):
-        stmt = select(Permission.perm_code)
-        result = await db.execute(stmt)
-        return set(result.scalars().all())
+        stmt_perms = select(Permission.perm_code)
+        result_perms = await db.execute(stmt_perms)
+        return {code for code in result_perms.scalars().all() if code is not None}
 
     # 查询角色关联的权限编码
-    stmt = (
+    stmt_perms = (
         select(Permission.perm_code)
         .join(RolePermission, RolePermission.perm_id == Permission.perm_id)
         .where(RolePermission.role_id == role_id)
     )
-    result = await db.execute(stmt)
-    return set(result.scalars().all())
+    result_perms = await db.execute(stmt_perms)
+    return {code for code in result_perms.scalars().all() if code is not None}
 
 
 async def _count(db: AsyncSession, model) -> int:

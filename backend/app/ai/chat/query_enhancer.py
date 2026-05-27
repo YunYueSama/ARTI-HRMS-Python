@@ -65,7 +65,7 @@ class QueryEnhancer:
             return self._model
 
         try:
-            from app.ai.chat.llm_provider import get_chat_model, _is_placeholder_key
+            from app.ai.chat.llm_provider import _is_placeholder_key, get_chat_model
 
             config = settings.primary_llm_config
             if _is_placeholder_key(config.api_key):

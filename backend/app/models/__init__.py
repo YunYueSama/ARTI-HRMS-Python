@@ -14,7 +14,6 @@ from app.models.agent import AgentApprovalRecord, AgentExecutionLog, AgentTask
 
 # AI 相关模型
 from app.models.ai_chat import AiChatMessage
-from app.models.persona import PersonaConfig
 from app.models.approval import ApprovalRule, ApprovalRuleType, DeptPermissionTemplate
 
 # 考勤和请假模型
@@ -28,6 +27,7 @@ from app.models.job_position import JobPosition
 from app.models.leave_request import LeaveRequest
 from app.models.module_scope import ModuleScopeDetail, ModuleScopeRule
 from app.models.permission import Permission
+from app.models.persona import PersonaConfig
 from app.models.role import Role
 from app.models.role_permission import RolePermission
 

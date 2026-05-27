@@ -49,7 +49,7 @@ async def get_active_persona(
     _current_user=Depends(get_current_user),
 ):
     """获取当前激活的人设"""
-    stmt = select(PersonaConfig).where(PersonaConfig.is_active == True)
+    stmt = select(PersonaConfig).where(PersonaConfig.is_active.is_(True))
     result = await db.execute(stmt)
     persona = result.scalar_one_or_none()
     if not persona:
@@ -131,7 +131,7 @@ async def activate_persona(
         return fail(message="人设不存在")
 
     # 取消所有已激活的人设
-    stmt = select(PersonaConfig).where(PersonaConfig.is_active == True)
+    stmt = select(PersonaConfig).where(PersonaConfig.is_active.is_(True))
     result = await db.execute(stmt)
     for p in result.scalars().all():
         p.is_active = False

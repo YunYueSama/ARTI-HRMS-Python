@@ -57,7 +57,7 @@ async def get_active_persona(db: AsyncSession) -> str:
     """
     from app.models.persona import PersonaConfig
 
-    stmt = select(PersonaConfig).where(PersonaConfig.is_active == True)
+    stmt = select(PersonaConfig).where(PersonaConfig.is_active.is_(True))
     result = await db.execute(stmt)
     persona = result.scalar_one_or_none()
     if persona:

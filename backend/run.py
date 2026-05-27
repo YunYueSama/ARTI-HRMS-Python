@@ -14,7 +14,7 @@ import sys
 # 自动切换到脚本所在目录，避免因工作目录不同导致 import 失败
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-import uvicorn
+import uvicorn  # noqa: E402
 
 if __name__ == "__main__":
     is_prod = "--prod" in sys.argv

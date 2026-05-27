@@ -459,7 +459,7 @@ class ChatService:
 # 混合检索编排（模块级函数）
 # ============================================================
 
-import asyncio
+import asyncio  # noqa: E402
 
 
 async def _hybrid_retrieve(message: str, user_id: int, db: AsyncSession) -> str:
@@ -581,7 +581,7 @@ def _extract_entity_name(message: str) -> str | None:
         if not graph or graph.number_of_nodes() == 0:
             return None
 
-        best_match = None
+        best_match: str | None = None
         best_len = 0
         for _node_id, attrs in graph.nodes(data=True):
             name = attrs.get("name", "")
