@@ -132,7 +132,9 @@ class ChatService:
         knowledge_context = ""
         if category == MessageCategory.SYSTEM_DATA_QUERY:
             knowledge_context = await _hybrid_retrieve(message, user_id, db)
-            logger.info(f"知识注入结果: 长度={len(knowledge_context)}, 预览={knowledge_context[:200] if knowledge_context else '(空)'}")
+            logger.info(
+                f"知识注入结果: 长度={len(knowledge_context)}, 预览={knowledge_context[:200] if knowledge_context else '(空)'}"
+            )
 
         # Step 3: 加载对话历史
         # 回滚以清除可能的失败事务状态（前面的并行检索可能已损坏会话）
@@ -492,7 +494,9 @@ async def _hybrid_retrieve(message: str, user_id: int, db: AsyncSession) -> str:
         graph_task = _try_graph_query(message)
 
         results = await asyncio.gather(
-            keyword_task, vector_task, graph_task,
+            keyword_task,
+            vector_task,
+            graph_task,
             return_exceptions=True,
         )
 
@@ -556,6 +560,7 @@ async def _try_graph_query(message: str) -> list[dict]:
 
     try:
         from app.ai.graph_rag.knowledge_graph import hr_knowledge_graph
+
         return hr_knowledge_graph.query_relationships(entity_name, max_hops=2)
     except Exception as e:
         logger.debug(f"知识图谱查询失败: {e}")
@@ -577,6 +582,7 @@ def _extract_entity_name(message: str) -> str | None:
     """
     try:
         from app.ai.graph_rag.knowledge_graph import hr_knowledge_graph
+
         graph = hr_knowledge_graph.graph
         if not graph or graph.number_of_nodes() == 0:
             return None

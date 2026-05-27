@@ -155,7 +155,9 @@ async def list_salary_records(
     elif scope == "dept" and user_dept_id is not None:
         # JOIN 员工表按部门过滤
         stmt = stmt.join(Employee, SalaryRecord.emp_id == Employee.emp_id).where(Employee.dept_id == user_dept_id)
-        count_stmt = count_stmt.join(Employee, SalaryRecord.emp_id == Employee.emp_id).where(Employee.dept_id == user_dept_id)
+        count_stmt = count_stmt.join(Employee, SalaryRecord.emp_id == Employee.emp_id).where(
+            Employee.dept_id == user_dept_id
+        )
     # scope == "company" 不加额外过滤，查看所有数据
 
     if query.emp_id is not None:

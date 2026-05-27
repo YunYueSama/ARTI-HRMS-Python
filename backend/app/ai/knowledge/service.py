@@ -438,6 +438,7 @@ async def _append_weather_context(parts: list[str], message: str) -> None:
     # 默认城市（从配置读取）
     if not city_name:
         from app.core.config import settings
+
         city_name = settings.WEATHER_DEFAULT_CITY
 
     # 调用天气服务

@@ -74,7 +74,9 @@ async def list_salary_records(
         month_start=month_start,
         month_end=month_end,
     )
-    result = await salary_service.list_salary_records(query, db, scope=scope, user_emp_id=emp_id_for_scope, user_dept_id=dept_id)
+    result = await salary_service.list_salary_records(
+        query, db, scope=scope, user_emp_id=emp_id_for_scope, user_dept_id=dept_id
+    )
     return ok(data=result)
 
 

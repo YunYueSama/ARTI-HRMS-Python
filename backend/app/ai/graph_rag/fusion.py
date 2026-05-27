@@ -178,6 +178,7 @@ def build_graph_context_summary(graph_results: list[dict]) -> str:
 # RRF（Reciprocal Rank Fusion）融合
 # ============================================================
 
+
 def reciprocal_rank_fusion(
     ranked_lists: list[list[dict]],
     k: int = 60,
@@ -261,15 +262,19 @@ def fusion_search_rrf(
         paragraphs = [p.strip() for p in keyword_context.split("\n\n") if p.strip()]
         # 如果段落太短，按单行拆分
         if len(paragraphs) <= 1:
-            paragraphs = [line.strip() for line in keyword_context.split("\n") if line.strip() and len(line.strip()) > 10]
+            paragraphs = [
+                line.strip() for line in keyword_context.split("\n") if line.strip() and len(line.strip()) > 10
+            ]
         keyword_items = []
         for i, para in enumerate(paragraphs):
-            keyword_items.append({
-                "_rrf_id": f"keyword:{i}",
-                "content": para,
-                "source": "系统数据",
-                "score": 1.0,
-            })
+            keyword_items.append(
+                {
+                    "_rrf_id": f"keyword:{i}",
+                    "content": para,
+                    "source": "系统数据",
+                    "score": 1.0,
+                }
+            )
         if keyword_items:
             ranked_lists.append(keyword_items)
 
