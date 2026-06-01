@@ -9,6 +9,9 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)
 
 基于 **FastAPI + SQLAlchemy + LangChain + LangGraph** 的企业级人力资源管理系统后端，内置 AI 聊天助手「亚托莉（Atri）」，配合 [前端项目](https://github.com/YunYueSama/ARTI-HRMS-WEB) 使用。
+<div align="center">
+  <img width="900" height="400" alt="ATRI-logo-1" src="https://github.com/user-attachments/assets/3b35e062-d469-4f79-8b5b-94711bbbc10f" />
+</div>
 
 ## 技术栈
 
