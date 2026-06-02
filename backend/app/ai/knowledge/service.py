@@ -1,4 +1,4 @@
-"""
+﻿"""
 只读知识查询服务（ai/knowledge/service.py）
 
 说明：根据用户消息中的关键词，从 MySQL 数据库查询相关业务数据，
@@ -420,9 +420,15 @@ async def _append_weather_context(parts: list[str], message: str) -> None:
     # 尝试从消息中提取城市名
     # 常见模式："今天北京的天气"、"绵阳天气怎么样"、"上海天气"
     city_patterns = [
-        r"([\u4e00-\u9fa5]{2,4}?)(?:的|市)?天气",
-        r"天气.{0,4}([\u4e00-\u9fa5]{2,4})",
+        r"([一-龥]{2,4}?)天气",
+        r"天气.{0,4}([一-龥]{2,4})",
     ]
+
+    # 排除词：不是城市名的常见词
+    _exclude_words = frozenset([
+        "今天", "明天", "昨天", "后天", "这里", "那里", "怎么", "如何", "查询",
+        "么样", "怎样", "什么", "什么样", "热不热", "冷不冷", "好不好",
+    ])
 
     city_name = ""
     normalized = message.strip()
@@ -430,8 +436,7 @@ async def _append_weather_context(parts: list[str], message: str) -> None:
         match = re.search(pattern, normalized)
         if match:
             candidate = match.group(1)
-            # 排除非城市名的词
-            if candidate not in ("今天", "明天", "后天", "这里", "那里", "怎么", "如何", "查询"):
+            if candidate and candidate not in _exclude_words and len(candidate) >= 2:
                 city_name = candidate
                 break
 

@@ -135,6 +135,51 @@ async def search(
     return results
 
 
+async def search_with_rerank(
+    query: str,
+    top_k: int = 5,
+    db: AsyncSession | None = None,
+    similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+    enable_rerank: bool = True,
+) -> list[dict]:
+    """
+    语义搜索 + Rerank 精排
+
+    说明：先用向量检索获取较多候选结果（Top-20），
+         再用 Reranker 精排后返回 Top-K。
+
+    参数：
+        query: 用户查询文本
+        top_k: 最终返回的结果数量
+        db: PostgreSQL 异步数据库会话
+        similarity_threshold: 相似度阈值
+        enable_rerank: 是否启用 Rerank（默认 True）
+
+    返回：
+        精排后的搜索结果列表
+    """
+    if not enable_rerank:
+        return await search(query, top_k=top_k, db=db, similarity_threshold=similarity_threshold)
+
+    # 第一阶段：向量检索获取较多候选
+    candidates = await search(
+        query, top_k=top_k * 4, db=db, similarity_threshold=similarity_threshold
+    )
+
+    if not candidates:
+        return []
+
+    # 第二阶段：Rerank 精排
+    try:
+        from app.ai.rag.reranker import rerank_results
+
+        reranked = await rerank_results(query, candidates, top_n=top_k)
+        return reranked
+    except Exception as e:
+        logger.warning(f"Rerank 失败，返回原始排序: {e}")
+        return candidates[:top_k]
+
+
 async def get_rag_context(
     query: str,
     top_k: int = 5,

@@ -165,3 +165,77 @@ def _is_placeholder_key(api_key: str) -> bool:
         "",
     }
     return api_key.strip() in placeholders
+
+
+async def call_with_validation(
+    model: BaseChatModel,
+    messages: list[BaseMessage],
+    validator: "Callable[[str], bool] | None" = None,
+    correction_prompt: str = "",
+    max_retries: int = 3,
+) -> str:
+    """
+    带输出校验的 LLM 调用
+
+    说明：调用 LLM 后对输出进行格式/内容校验，
+         校验失败时携带错误信息重试。
+         适用于低配 LLM 输出不稳定的场景。
+
+    参数：
+        model: LangChain 聊天模型实例
+        messages: 消息列表
+        validator: 校验函数，接收输出文本返回是否有效
+        correction_prompt: 校验失败时的纠错提示（追加到重试消息中）
+        max_retries: 最大重试次数
+
+    返回：
+        LLM 生成的文本回复
+
+    异常：
+        所有重试都失败时，返回最后一次的原始输出（不抛异常）
+    """
+    last_output = ""
+
+    for attempt in range(max_retries):
+        try:
+            response = await model.ainvoke(messages)
+            content = response.content
+            if not isinstance(content, str) or not content.strip():
+                last_output = ""
+                continue
+
+            last_output = content.strip()
+
+            # 无校验函数时直接返回
+            if validator is None:
+                return last_output
+
+            # 校验通过
+            if validator(last_output):
+                return last_output
+
+            # 校验失败，准备重试
+            logger.warning(
+                f"LLM 输出校验失败（第 {attempt + 1} 次），"
+                f"输出: {last_output[:100]}..."
+            )
+
+            if attempt < max_retries - 1:
+                # 追加纠错提示
+                retry_messages = list(messages)
+                error_desc = correction_prompt or "输出格式不符合要求，请重新生成。"
+                retry_messages.append(
+                    SystemMessage(
+                        content=f"{error_desc}\n你上次的输出是：{last_output[:200]}\n请修正后重新输出。"
+                    )
+                )
+                messages = retry_messages
+
+        except Exception as e:
+            logger.warning(f"LLM 调用失败（第 {attempt + 1} 次）: {e}")
+            if attempt == max_retries - 1:
+                break
+
+    # 所有重试都失败，返回最后一次输出（可能不完美但不丢弃）
+    logger.warning(f"输出校验重试已耗尽，返回最后一次输出")
+    return last_output

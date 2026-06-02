@@ -183,27 +183,100 @@ async def extract_text(file_path: str, file_type: str) -> str:
 
 def _extract_pdf(path: Path) -> str:
     """
-    从 PDF 文件提取文本
+    从 PDF 文件提取文本（智能路由）
 
-    说明：使用 PyPDF2 逐页提取文本。如果 PyPDF2 不可用，
-         回退到以纯文本方式读取（可能乱码）。
+    说明：根据页面特征选择最优的提取策略：
+         1. 文本型 PDF → PyPDF2 直接提取（~10ms/页）
+         2. 稀疏页面 → 标记为需 OCR（未来扩展）
+         3. 全局降级 → 纯文本读取
+
+    路由逻辑：
+        - 先用 PyPDF2 快速提取所有页面
+        - 统计每页文本量，判断是否为文本型 PDF
+        - 如果大部分页面文本量 > 50 字，直接使用 PyPDF2 结果
+        - 如果大部分页面文本稀疏，可能是扫描件
     """
     try:
         from PyPDF2 import PdfReader
 
         reader = PdfReader(str(path))
         pages_text = []
+        sparse_pages = 0
+        total_pages = len(reader.pages)
+
         for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                pages_text.append(text)
-        return "\n\n".join(pages_text)
+            text = page.extract_text() or ""
+            pages_text.append(text)
+            if len(text.strip()) < 50:
+                sparse_pages += 1
+
+        # 路由判断
+        sparse_ratio = sparse_pages / total_pages if total_pages > 0 else 0
+
+        if sparse_ratio > 0.7:
+            # 大部分页面文本稀疏，可能是扫描件
+            logger.warning(
+                f"PDF 可能为扫描件（{sparse_pages}/{total_pages} 页文本稀疏），"
+                f"PyPDF2 提取质量可能不佳: {path.name}"
+            )
+            # 尝试用 pdfplumber 做更好的提取（如果可用）
+            better_text = _try_pdfplumber_extract(path)
+            if better_text:
+                return better_text
+            # 降级：使用 PyPDF2 结果（可能不完整）
+        elif sparse_ratio > 0.3:
+            # 部分页面文本稀疏，混合型 PDF
+            logger.info(
+                f"PDF 为混合型（{sparse_pages}/{total_pages} 页文本稀疏）: {path.name}"
+            )
+
+        result = "\n\n".join(pages_text)
+        if result.strip():
+            return result
+
+        # PyPDF2 提取结果为空，尝试 pdfplumber
+        better_text = _try_pdfplumber_extract(path)
+        if better_text:
+            return better_text
+
+        raise ValueError(f"PDF 文本提取结果为空: {path.name}")
+
     except ImportError:
         logger.warning("PyPDF2 未安装，尝试以纯文本方式读取 PDF")
         return _extract_plain_text(path)
+    except ValueError:
+        raise
     except Exception as e:
         logger.error(f"PDF 提取失败: {e}")
         raise ValueError(f"PDF 文本提取失败: {e}")
+
+
+def _try_pdfplumber_extract(path: Path) -> str:
+    """
+    尝试用 pdfplumber 提取 PDF 文本
+
+    说明：pdfplumber 对表格和复杂版面的提取效果更好，
+         作为 PyPDF2 的补充方案。
+    """
+    try:
+        import pdfplumber
+
+        with pdfplumber.open(str(path)) as pdf:
+            pages_text = []
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    pages_text.append(text)
+            result = "\n\n".join(pages_text)
+            if result.strip():
+                logger.info(f"pdfplumber 提取成功: {len(result)}字")
+                return result
+    except ImportError:
+        logger.debug("pdfplumber 未安装，跳过")
+    except Exception as e:
+        logger.warning(f"pdfplumber 提取失败: {e}")
+
+    return ""
 
 
 def _extract_docx(path: Path) -> str:

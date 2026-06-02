@@ -9,6 +9,9 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)
 
 基于 **FastAPI + SQLAlchemy + LangChain + LangGraph** 的企业级人力资源管理系统后端，内置 AI 聊天助手「亚托莉（Atri）」，配合 [前端项目](https://github.com/YunYueSama/ARTI-HRMS-WEB) 使用。
+<div align="center">
+  <img width="900" height="400" alt="ATRI-logo-1" src="https://github.com/user-attachments/assets/3b35e062-d469-4f79-8b5b-94711bbbc10f" />
+</div>
 
 ## 技术栈
 
@@ -113,9 +116,13 @@ AI 直接查询数据库获取真实数据注入上下文，覆盖：系统概�
 
 **SSE 流式输出 + 对话记忆**
 
-- LangChain LCEL 链式调用，逐 chunk 推送 SSE 事件
+- LangChain LCEL 链式调用，逐 chunk 推送 SSE 事件，前端通过 fetch + ReadableStream 实时渲染
+- `<think>` 思考标签自动过滤，用户不会看到模型内部推理过程
 - 自定义 DatabaseChatMemory，异步 PostgreSQL 持久化，滑动窗口 10 轮对话
+- 对话上下文管理：滑动窗口 + Token 预算分配（system 20% / history 40% / RAG 30% / user 10%）+ 摘要压缩 + 分层记忆
 - 主备模型自动切换：DashScope → Ollama → 模板降级回复
+- 低配 LLM 保障：输出格式校验 + 纠错重试（最多 3 次）
+- 用户反馈闭环：每条回复提供 👍/👎 按钮，反馈数据关联 Langfuse Trace
 
 ### Agent 代理执行
 

@@ -5,23 +5,22 @@ AI 聊天路由（routers/ai_chat.py）
      使用 FastAPI 的 StreamingResponse 实现 Server-Sent Events（SSE）。
 
 端点列表：
-    POST /api/ai/chat     → SSE 流式聊天
-    GET  /api/ai/history  → 获取聊天历史（分页）
-    DELETE /api/ai/history → 清除聊天历史
-
-Java 对应关系：
-    AiChatController.chat()         → chat_stream()
-    AiChatController.getHistory()   → get_history()
-    AiChatController.clearHistory() → clear_history()
+    POST /api/ai/chat         → 普通 JSON 响应（兼容 axios）
+    POST /api/ai/chat/stream  → SSE 流式输出
+    GET  /api/ai/history      → 获取聊天历史（分页）
+    DELETE /api/ai/history    → 清除聊天历史
 
 SSE 协议格式：
-    每个数据块：data: {text}\n\n
-    结束标记：  data: [DONE]\n\n
+    每个数据块：data: {"text": "...", "done": false}\n\n
+    结束标记：  data: {"text": "", "done": true, "model": "...", "provider": "..."}\n\n
 """
 
+import json
 import logging
+import re
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +37,11 @@ router = APIRouter()
 
 # 聊天服务单例（延迟初始化）
 _chat_service: ChatService | None = None
+
+
+def _strip_think_tags(text: str) -> str:
+    """移除 LLM 返回的 <think>...</think> 思考标签及其内容"""
+    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
 def _get_chat_service() -> ChatService:
@@ -79,9 +83,10 @@ async def chat_stream(
             message=request.message,
             db=db,
         )
+        reply = _strip_think_tags(result["reply"])
         return ok(
             data={
-                "reply": result["reply"],
+                "reply": reply,
                 "role": "assistant",
                 "provider": result["provider"],
                 "model": result["model"],
@@ -97,6 +102,134 @@ async def chat_stream(
                 "providerAvailable": False,
             }
         )
+
+
+# ============================================================
+# POST /api/ai/chat/stream - SSE 流式聊天
+# ============================================================
+
+
+@router.post("/chat/stream")
+async def chat_stream_sse(
+    request: ChatRequest,
+    db: AsyncSession = Depends(get_mysql_session),
+):
+    """
+    SSE 流式聊天
+
+    说明：使用 Server-Sent Events 逐 chunk 返回 LLM 生成的文本。
+         前端通过 fetch + ReadableStream 或 EventSource 接收。
+         消息持久化在流式结束后通过独立数据库会话完成。
+
+    SSE 数据格式：
+        data: {"text": "你", "done": false}\n\n
+        data: {"text": "好", "done": false}\n\n
+        data: {"text": "", "done": true, "model": "qwen-plus", "provider": "dashscope"}\n\n
+    """
+    from app.ai.chat.memory import DatabaseChatMemory
+
+    service = _get_chat_service()
+    user_id = request.user_id
+    user_message = request.message
+    full_response = ""
+    _think_buffer = ""  # 缓冲区，用于检测和过滤 <think> 标签
+    _in_think = False   # 是否在 <think> 标签内部
+
+    def _filter_think_tags(text: str) -> tuple[str, str]:
+        """过滤 <think> 标签，返回 (要输出的文本, 剩余缓冲区)"""
+        nonlocal _in_think, _think_buffer
+        _think_buffer += text
+        output = ""
+
+        while _think_buffer:
+            if _in_think:
+                # 在 <think> 标签内部，寻找结束标签
+                end_idx = _think_buffer.find("</think>")
+                if end_idx != -1:
+                    # 找到结束标签，跳过思考内容
+                    _think_buffer = _think_buffer[end_idx + len("</think>"):]
+                    _in_think = False
+                else:
+                    # 没找到结束标签，全部是思考内容，丢弃
+                    _think_buffer = ""
+                    break
+            else:
+                # 不在 <think> 标签内部，寻找开始标签
+                start_idx = _think_buffer.find("<think>")
+                if start_idx != -1:
+                    # 输出 <think> 之前的文本
+                    output += _think_buffer[:start_idx]
+                    _think_buffer = _think_buffer[start_idx + len("<think>"):]
+                    _in_think = True
+                else:
+                    # 没有 <think> 标签，检查末尾可能的部分标签
+                    # "<think>" 可能跨 chunk 到达，保留末尾可能的部分标签
+                    for i in range(1, min(6, len(_think_buffer))):
+                        if _think_buffer.endswith("<think>"[:i]):
+                            output += _think_buffer[:-i]
+                            _think_buffer = _think_buffer[-i:]
+                            break
+                    else:
+                        output += _think_buffer
+                        _think_buffer = ""
+                    break
+
+        return output
+
+    async def event_generator():
+        nonlocal full_response
+        try:
+            async for chunk in service.chat_stream(
+                user_id=user_id,
+                message=user_message,
+                db=db,
+            ):
+                # 过滤 <think> 标签
+                filtered = _filter_think_tags(chunk)
+                if filtered:
+                    full_response += filtered
+                    yield f"data: {json.dumps({'text': filtered, 'done': False}, ensure_ascii=False)}\n\n"
+
+            # 流结束后保存消息
+            # 注意：不能用 FastAPI 注入的 db，因为 StreamingResponse 返回时依赖已关闭会话
+            # 必须创建新的数据库会话
+            clean_response = _strip_think_tags(full_response)
+            if clean_response:
+                try:
+                    from app.core.database import SessionFactory
+                    if SessionFactory is not None:
+                        async with SessionFactory() as save_db:
+                            memory = DatabaseChatMemory(user_id=user_id, db=save_db)
+                            await memory.save_messages(
+                                human_message=user_message,
+                                ai_message=clean_response,
+                                provider_name=settings.LLM_PRIMARY_PROVIDER,
+                                model_name=settings.LLM_PRIMARY_MODEL,
+                            )
+                            await save_db.commit()
+                            logger.info(f"SSE 消息已持久化 (user_id={user_id}, len={len(clean_response)})")
+                    else:
+                        logger.error("SessionFactory 未初始化，无法保存 SSE 消息")
+                except Exception as save_err:
+                    logger.error(f"SSE 消息持久化失败: {save_err}")
+
+            # 流结束标记
+            yield f"data: {json.dumps({'text': '', 'done': True, 'model': settings.LLM_PRIMARY_MODEL, 'provider': settings.LLM_PRIMARY_PROVIDER}, ensure_ascii=False)}\n\n"
+
+        except Exception as e:
+            logger.error(f"SSE 流式聊天异常: {e}")
+            yield f"data: {json.dumps({'text': f'模型连接出现问题：{str(e)}', 'done': True, 'error': True}, ensure_ascii=False)}\n\n"
+
+    response = StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+    return response
 
 
 # ============================================================

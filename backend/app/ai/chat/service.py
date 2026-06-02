@@ -188,7 +188,8 @@ class ChatService:
             model_name = "persona-template"
             yield fallback_reply
 
-        # Step 6: 保存对话记录
+        # Step 6: 保存对话记录（仅在 db 会话仍有效时执行）
+        # 注：SSE 流式模式下，db 会话可能已关闭，由调用方通过 background task 保存
         try:
             await memory.save_messages(
                 human_message=message,
@@ -198,7 +199,7 @@ class ChatService:
                 used_system_data=bool(knowledge_context),
             )
         except Exception as e:
-            logger.error(f"保存对话记录失败: {e}")
+            logger.warning(f"chat_stream 内部保存失败（SSE 模式下由调用方保存）: {e}")
 
     async def chat_sync(
         self,
@@ -488,6 +489,16 @@ async def _hybrid_retrieve(message: str, user_id: int, db: AsyncSession) -> str:
     from app.ai.graph_rag.fusion import fusion_search_rrf
 
     try:
+        # 判断是否为纯知识服务查询（天气、AI 元信息等），这类查询不需要 RAG 向量搜索
+        _knowledge_only_keywords = frozenset(["天气", "气温", "下雨", "下雪", "模型", "model", "llm", "provider", "版本", "用的什么", "用什么"])
+        normalized_msg = message.strip().lower()
+        is_knowledge_only = any(kw in normalized_msg for kw in _knowledge_only_keywords)
+
+        if is_knowledge_only:
+            # 纯知识服务查询：只走关键词查询，跳过 RAG 和图谱
+            keyword_ctx = await query_knowledge(message, user_id, db)
+            return keyword_ctx
+
         # 并行执行三个检索任务
         keyword_task = query_knowledge(message, user_id, db)
         vector_task = enhanced_vector_search(message, db)
